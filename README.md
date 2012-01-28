@@ -25,6 +25,7 @@ It is easiest if your OS user has access to this database. I just created a user
 Execution
 ------------
 The first time you run it, you will need to include the -c | --create option to create the two tables:
+
     `python changesetmd.py -d <database> -c`
 
 The create function can be combined with the file option to immediately parse a file.
@@ -45,24 +46,26 @@ Notes
 
 Table Structure
 ------------
-ChangesetMD populates two tables:
-osm\_changeset
+ChangesetMD populates two tables
 
-- id: changeset ID
-- created\_at/closed\_at: create/closed time 
-- num\_changes: number of objects changed
-- min\_lat/max\_lat/min\_lon/max\_lon: description of the changeset bbox in decimal degrees
-- user\_name: OSM username
-- user\_id: numeric OSM user ID
+osm\_changeset:
+
+- `id`: changeset ID
+- `created_at/closed_at`: create/closed time 
+- `num_changes`: number of objects changed
+- `min_lat/max_lat/min_lon/max_lon`: description of the changeset bbox in decimal degrees
+- `user_name`: OSM username
+- `user_id`: numeric OSM user ID
 
 Note that all fields except for ID and created time can be null.
 
 Changeset tags are in their own table since there may be an arbitrary number of them.
+
 osm\_changeset\_tags:
 
-- changeset\_id: changeset ID, foreign key to osm\_changeset
-- key: tag key
-- value: tag value
+- `changeset_id`: changeset ID, foreign key to osm\_changeset
+- `key`: tag key
+- `value`: tag value
 
 Example query: count how many changesets have a created\_by=\* tag.
 
