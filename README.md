@@ -1,7 +1,7 @@
 ChangesetMD
 =========
 
-ChangesetMD is a simple XML parser written in python that takes the weekly "changeset-latest.osm" file from http://planet.openstreetmap.org/ and shoves the data into a simple postgres database so it can be queried.
+ChangesetMD is a simple XML parser written in python that takes the weekly changeset metadata dump file from http://planet.openstreetmap.org/ and shoves the data into a simple postgres database so it can be queried.
 
 WARNING: This is pretty much my first python project ever beyond "hello world" so... you have been warned.
 
