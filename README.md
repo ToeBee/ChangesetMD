@@ -39,9 +39,11 @@ Optional database user/password/host arguments can be used to access a postgres 
 
 Notes
 ------------
-- ChangesetMD does not currently support reading directly from .bz2 files. Unzip them first.
-- It prints a message every 10,000 records.
-- It takes about 4 hours to import the current dump on a decent home computer.
+- Does not currently support reading directly from .bz2 files. Unzip them first.
+- Prints a message every 10,000 records.
+- Takes about 4 hours to import the current dump on a decent home computer.
+- Would likely be faster to process the XML into two flat files and then use the postgres COPY command to do a bulk load
+- Needs more indexes to make querying practical. I'm waiting on a first full load to experiment with indexes
 
 
 Table Structure
