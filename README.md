@@ -11,7 +11,8 @@ Setup
 
 ChangesetMD works with python 2.7.
 
-The only software requirement besides postgres itself is the python postgres library psycopg2. On Debian-based systems this means installing the python-psycopg2 package.
+Aside from postgresql, ChangesetMD depends on the python librarys psycopg2 and dateutil.
+On Debian-based systems this means installing the python-psycopg2 and python-dateutil packages.
 
 ChangesetMD expects a postgres database to be set up for it. It can likely co-exist within another database if desired. Otherwise, As the postgres user execute:
 
