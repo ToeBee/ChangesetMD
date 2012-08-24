@@ -75,3 +75,13 @@ Example query: count how many changesets have a created\_by=\* tag.
     from osm_changeset, osm_changeset_tags 
     where changeset_id = id and key = 'created_by';
 
+
+License
+------------
+Copyright (C) 2012  Toby Murray
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+
+See the GNU Affero General Public License for more details: http://www.gnu.org/licenses/agpl.txt
