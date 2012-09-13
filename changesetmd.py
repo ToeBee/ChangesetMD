@@ -19,8 +19,9 @@ class ChangesetMD():
     def truncateTables(self, connection):
         print 'truncating tables'
         cursor = connection.cursor()
-        cursor.execute("TRUNCATE TABLE osm_changeset CASCADE")
+        cursor.execute("TRUNCATE TABLE osm_changeset CASCADE;")
         cursor.execute(queries.dropIndexes)
+        connection.commit()
         
     def createTables(self, connection):
         print 'creating tables'
