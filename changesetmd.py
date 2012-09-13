@@ -25,7 +25,6 @@ class ChangesetMD():
         print 'creating tables'
         cursor = connection.cursor()
         cursor.execute(queries.createChangesetTable)
-        cursor.execute(queries.createTagsTable)
         connection.commit()
 
 if __name__ == '__main__':

@@ -17,25 +17,14 @@ createChangesetTable = '''CREATE TABLE osm_changeset (
 )
 '''
 
-createTagsTable = '''CREATE TABLE osm_changeset_tags (
-  changeset_id bigint,
-  key varchar(255),
-  value varchar(255)
-)'''
-
 dropIndexes = '''ALTER TABLE osm_changeset DROP CONSTRAINT IF EXISTS osm_changeset_pkey CASCADE;
 DROP INDEX IF EXISTS tags_key_idx, tags_value_idx;
 DROP INDEX IF EXISTS user_name_idx, user_id_idx, created_idx;
 '''
 
-createConstraints = '''ALTER TABLE osm_changeset ADD CONSTRAINT osm_changeset_pkey PRIMARY KEY(id);
-ALTER TABLE osm_changeset_tags ADD CONSTRAINT osm_changeset_tags_fk FOREIGN KEY (changeset_id) REFERENCES osm_changeset(id);
-'''
+createConstraints = '''ALTER TABLE osm_changeset ADD CONSTRAINT osm_changeset_pkey PRIMARY KEY(id);'''
 
-createIndexes = '''CREATE INDEX on osm_changeset_tags(key);
-CREATE INDEX tags_key_idx ON osm_changeset_tags(value);
-CREATE INDEX tags_value_idx ON osm_changeset_tags(changeset_id);
-CREATE INDEX user_name_idx ON osm_changeset(user_name);
+createIndexes = '''CREATE INDEX user_name_idx ON osm_changeset(user_name);
 CREATE INDEX user_id_idx ON osm_changeset(user_id);
 CREATE INDEX created_idx ON osm_changeset(created_at);
 '''

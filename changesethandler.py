@@ -45,8 +45,6 @@ class ChangesetHandler(xml.sax.handler.ContentHandler):
             values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)''', (self.changeset.id, self.changeset.userId, self.changeset.createTime, self.changeset.minLat, 
                                                   self.changeset.maxLat, self.changeset.minLon, self.changeset.maxLon, self.changeset.closeTime, 
                                                   self.changeset.numChanges, self.changeset.userName))
-            for key in self.tags.iterkeys():
-                cursor.execute("INSERT into osm_changeset_tags values (%s, %s, %s)", (self.changeset.id, key, self.tags.get(key)))
             self.insertCount += 1
             if self.insertCount % 10000 == 0:
                 print "inserted {:,}".format(self.insertCount)
