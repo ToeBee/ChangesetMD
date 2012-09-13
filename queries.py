@@ -3,7 +3,8 @@ Just a utility file to store some SQL queries for easy reference
 
 @author: Toby Murray
 '''
-createChangesetTable = '''CREATE TABLE osm_changeset ( 
+createChangesetTable = '''CREATE EXTENSION hstore;
+  CREATE TABLE osm_changeset (
   id bigint,
   user_id bigint,
   created_at timestamp without time zone,

@@ -41,10 +41,10 @@ class ChangesetHandler(xml.sax.handler.ContentHandler):
             '''insert into database'''
             cursor = self.dbConnection.cursor()
             cursor.execute('''INSERT into osm_changeset 
-            (id, user_id, created_at, min_lat, max_lat, min_lon, max_lon, closed_at, num_changes, user_name) 
-            values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)''', (self.changeset.id, self.changeset.userId, self.changeset.createTime, self.changeset.minLat, 
+            (id, user_id, created_at, min_lat, max_lat, min_lon, max_lon, closed_at, num_changes, user_name, tags) 
+            values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)''', (self.changeset.id, self.changeset.userId, self.changeset.createTime, self.changeset.minLat, 
                                                   self.changeset.maxLat, self.changeset.minLon, self.changeset.maxLon, self.changeset.closeTime, 
-                                                  self.changeset.numChanges, self.changeset.userName))
+                                                  self.changeset.numChanges, self.changeset.userName,self.tags))
             self.insertCount += 1
             if self.insertCount % 10000 == 0:
                 print "inserted {:,}".format(self.insertCount)
