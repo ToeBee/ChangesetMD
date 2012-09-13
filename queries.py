@@ -13,7 +13,8 @@ createChangesetTable = '''CREATE TABLE osm_changeset (
   max_lon numeric(10,7),
   closed_at timestamp without time zone,
   num_changes integer,
-  user_name varchar(255)
+  user_name varchar(255),
+  tags hstore
 )
 '''
 
@@ -27,5 +28,6 @@ createConstraints = '''ALTER TABLE osm_changeset ADD CONSTRAINT osm_changeset_pk
 createIndexes = '''CREATE INDEX user_name_idx ON osm_changeset(user_name);
 CREATE INDEX user_id_idx ON osm_changeset(user_id);
 CREATE INDEX created_idx ON osm_changeset(created_at);
+CREATE INDEX tags_idx ON osm_changeset USING GIN(tags);
 '''
 
