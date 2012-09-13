@@ -9,6 +9,7 @@ import os, pwd
 import argparse
 import xml.sax
 import psycopg2
+import psycopg2.extras
 import changesethandler
 import queries
 
@@ -25,7 +26,6 @@ class ChangesetMD():
         print 'creating tables'
         cursor = connection.cursor()
         cursor.execute(queries.createChangesetTable)
-        cursor.execute(queries.createTagsTable)
         connection.commit()
 
 if __name__ == '__main__':
@@ -50,7 +50,9 @@ if __name__ == '__main__':
         
     if args.createTables:
         foo.createTables(conn)
-    
+
+    psycopg2.extras.register_hstore(conn)
+        
     if not (args.fileName is None):
         parser = xml.sax.make_parser()
         handler = changesethandler.ChangesetHandler(conn)
