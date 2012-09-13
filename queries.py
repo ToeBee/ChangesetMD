@@ -20,8 +20,7 @@ createChangesetTable = '''CREATE EXTENSION IF NOT EXISTS hstore;
 '''
 
 dropIndexes = '''ALTER TABLE osm_changeset DROP CONSTRAINT IF EXISTS osm_changeset_pkey CASCADE;
-DROP INDEX IF EXISTS tags_key_idx, tags_value_idx;
-DROP INDEX IF EXISTS user_name_idx, user_id_idx, created_idx;
+DROP INDEX IF EXISTS user_name_idx, user_id_idx, created_idx, tags_idx;
 '''
 
 createConstraints = '''ALTER TABLE osm_changeset ADD CONSTRAINT osm_changeset_pkey PRIMARY KEY(id);'''
