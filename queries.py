@@ -3,7 +3,7 @@ Just a utility file to store some SQL queries for easy reference
 
 @author: Toby Murray
 '''
-createChangesetTable = '''CREATE EXTENSION hstore;
+createChangesetTable = '''CREATE EXTENSION IF NOT EXISTS hstore;
   CREATE TABLE osm_changeset (
   id bigint,
   user_id bigint,
