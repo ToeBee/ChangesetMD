@@ -9,6 +9,7 @@ import os, pwd
 import argparse
 import xml.sax
 import psycopg2
+import psycopg2.extras
 import changesethandler
 import queries
 
@@ -18,14 +19,14 @@ class ChangesetMD():
     def truncateTables(self, connection):
         print 'truncating tables'
         cursor = connection.cursor()
-        cursor.execute("TRUNCATE TABLE osm_changeset CASCADE")
+        cursor.execute("TRUNCATE TABLE osm_changeset CASCADE;")
         cursor.execute(queries.dropIndexes)
+        connection.commit()
         
     def createTables(self, connection):
         print 'creating tables'
         cursor = connection.cursor()
         cursor.execute(queries.createChangesetTable)
-        cursor.execute(queries.createTagsTable)
         connection.commit()
 
 if __name__ == '__main__':
@@ -50,7 +51,9 @@ if __name__ == '__main__':
         
     if args.createTables:
         foo.createTables(conn)
-    
+
+    psycopg2.extras.register_hstore(conn)
+        
     if not (args.fileName is None):
         parser = xml.sax.make_parser()
         handler = changesethandler.ChangesetHandler(conn)
