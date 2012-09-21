@@ -28,6 +28,15 @@ class ChangesetMD():
         cursor = connection.cursor()
         cursor.execute(queries.createChangesetTable)
         connection.commit()
+    
+    def doIncremental(self, connection):
+        """In theory this should be more complicated to correctly deal with changesets that are still open when the dump is created however it seems that only 
+           closed changesets are exported in the dump despite there being a "closed" attribute, which is always true. So we can just go from the newest one in the last dump.
+        """
+        print 'preparing for incremental update'
+        cursor = connection.cursor()
+        cursor.execute(queries.findNewestChangeset)
+        return cursor.fetchone()[0]
 
 if __name__ == '__main__':
     argParser = argparse.ArgumentParser(description="Parse OSM Changeset metadata into a database")
@@ -38,6 +47,7 @@ if __name__ == '__main__':
     argParser.add_argument('-p', '--password', action='store', dest='dbPass', default='', help='Database password (default: blank)')
     argParser.add_argument('-d', '--database', action='store', dest='dbName', help='Target database', required=True)
     argParser.add_argument('-f', '--file', action='store', dest='fileName', help='OSM changeset file to parse')
+    argParser.add_argument('-i', '--incremental', action='store_true', default=False, dest='incrementalUpdate', help='Perform incremental update. Only import new changesets')
     args = argParser.parse_args()
     
     if not (args.dbHost is None):
@@ -45,26 +55,33 @@ if __name__ == '__main__':
     else:
         conn = psycopg2.connect(database=args.dbName, user=args.dbUser, password=args.dbPass)
     
-    foo = ChangesetMD()
+    md = ChangesetMD()
     if args.truncateTables:
-        foo.truncateTables(conn)
+        md.truncateTables(conn)
         
     if args.createTables:
-        foo.createTables(conn)
+        md.createTables(conn)
+        
+    newestChangeset = -1
+    if args.incrementalUpdate:
+        newestChangeset = md.doIncremental(conn)
+        print "Performing incremental update from changeset {:,}".format(newestChangeset)
 
     psycopg2.extras.register_hstore(conn)
         
     if not (args.fileName is None):
         parser = xml.sax.make_parser()
-        handler = changesethandler.ChangesetHandler(conn)
+        handler = changesethandler.ChangesetHandler(conn, newestChangeset)
         parser.setContentHandler(handler)
         print 'parsing changeset file'
         parser.parse(args.fileName)
-        cursor = conn.cursor()
-        print 'creating constraints'
-        cursor.execute(queries.createConstraints)
-        print 'creating indexes'
-        cursor.execute(queries.createIndexes)
+        if not args.incrementalUpdate:
+            cursor = conn.cursor()
+            print 'creating constraints'
+            cursor.execute(queries.createConstraints)
+            print 'creating indexes'
+            cursor.execute(queries.createIndexes)
+            
         conn.commit()
         conn.close()
     

@@ -25,15 +25,19 @@ It is easiest if your OS user has access to this database. I just created a user
 
 Execution
 ------------
-The first time you run it, you will need to include the -c | --create option to create the two tables:
+The first time you run it, you will need to include the -c | --create option to create the table:
 
     python changesetmd.py -d <database> -c
 
 The create function can be combined with the file option to immediately parse a file.
 
-To parse the file, use the -f | --file option. After the first run to create the tables, you can use -t | --truncate to clear out the tables and import a new file:
+To parse the file, use the -f | --file option. After the first run to create the tables, you can either use -t | --truncate to clear out the tables and import a new file or you can use the -i | --incremental option which will skip existing changesets in the database and only insert new ones. This is faster.
 
     python changesetmd.py -d <database> -t -f /tmp/changeset-latest.osm
+
+or
+
+   python changesetmd.py -d <database> -i -f /tmp/changeset-latest.osm
 
 Optional database user/password/host arguments can be used to access a postgres database in other ways.
 
@@ -45,6 +49,7 @@ Notes
 - Takes 2-3 hours to import the current dump on a decent home computer.
 - Would likely be faster to process the XML into two flat files and then use the postgres COPY command to do a bulk load
 - Needs more indexes to make querying practical. I'm waiting on a first full load to experiment with indexes
+- The incremental mode is faster (takes about 1 hour) but still kind of slow. It is CPU bound on XML parsing so it probably needs to be switched to a faster XML parser to improve performance.
 
 
 Table Structure

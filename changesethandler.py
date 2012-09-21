@@ -7,11 +7,13 @@ import xml.sax.handler
 import dateutil.parser
 
 class ChangesetHandler(xml.sax.handler.ContentHandler):
-    def __init__(self, connection):
+    def __init__(self, connection, newestChangeset):
         self.mapping = {}
         self.tags = dict()
         self.dbConnection = connection
         self.insertCount = 0
+        self.skipCount = 0
+        self.startFromChangeset = newestChangeset
         
     def startElement(self, name, attrs):
         if name == "changeset":
@@ -38,17 +40,24 @@ class ChangesetHandler(xml.sax.handler.ContentHandler):
             
     def endElement(self, name):
         if name == "changeset":
-            '''insert into database'''
-            cursor = self.dbConnection.cursor()
-            cursor.execute('''INSERT into osm_changeset 
-            (id, user_id, created_at, min_lat, max_lat, min_lon, max_lon, closed_at, num_changes, user_name, tags) 
-            values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)''', (self.changeset.id, self.changeset.userId, self.changeset.createTime, self.changeset.minLat, 
+            if self.startFromChangeset != -1 and long(self.changeset.id) <= self.startFromChangeset:
+                self.skipCount += 1
+                if self.skipCount % 10000 == 0:
+                    print "skipped {:,}".format(self.skipCount)
+                    
+            else:
+                '''insert into database'''
+                cursor = self.dbConnection.cursor()
+                cursor.execute('''INSERT into osm_changeset 
+                (id, user_id, created_at, min_lat, max_lat, min_lon, max_lon, closed_at, num_changes, user_name, tags) 
+                values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)''', (self.changeset.id, self.changeset.userId, self.changeset.createTime, self.changeset.minLat, 
                                                   self.changeset.maxLat, self.changeset.minLon, self.changeset.maxLon, self.changeset.closeTime, 
                                                   self.changeset.numChanges, self.changeset.userName,self.tags))
-            self.insertCount += 1
-            if self.insertCount % 10000 == 0:
-                print "inserted {:,}".format(self.insertCount)
-            cursor.close()
+                self.insertCount += 1
+                if self.insertCount % 10000 == 0:
+                    print "inserted {:,}".format(self.insertCount)
+                cursor.close()
+                
             self.tags.clear()
             
     def endDocument(self):
