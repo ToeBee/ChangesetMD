@@ -37,7 +37,7 @@ To parse the file, use the -f | --file option. After the first run to create the
 
 or
 
-   python changesetmd.py -d <database> -i -f /tmp/changeset-latest.osm
+    python changesetmd.py -d <database> -i -f /tmp/changeset-latest.osm
 
 Optional database user/password/host arguments can be used to access a postgres database in other ways.
 
