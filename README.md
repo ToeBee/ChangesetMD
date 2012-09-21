@@ -42,14 +42,14 @@ Notes
 ------------
 - Does not currently support reading directly from .bz2 files. Unzip them first.
 - Prints a message every 10,000 records.
-- Takes about 4 hours to import the current dump on a decent home computer.
+- Takes 2-3 hours to import the current dump on a decent home computer.
 - Would likely be faster to process the XML into two flat files and then use the postgres COPY command to do a bulk load
 - Needs more indexes to make querying practical. I'm waiting on a first full load to experiment with indexes
 
 
 Table Structure
 ------------
-ChangesetMD populates two tables
+ChangesetMD populates one table with the following structure:
 
 osm\_changeset:
 
@@ -59,23 +59,26 @@ osm\_changeset:
 - `min_lat/max_lat/min_lon/max_lon`: description of the changeset bbox in decimal degrees
 - `user_name`: OSM username
 - `user_id`: numeric OSM user ID
+- `tags`: an hstore column holding all the tags of the changeset
 
-Note that all fields except for ID and created time can be null.
+Note that all fields except for id and created\_at can be null.
 
-Changeset tags are in their own table since there may be an arbitrary number of them.
+If you are unfamiliar with hstore and how to query it, see the [postgres documentation](http://www.postgresql.org/docs/9.2/static/hstore.html)
 
-osm\_changeset\_tags:
+Example queries: 
 
-- `changeset_id`: changeset ID, foreign key to osm\_changeset
-- `key`: tag key
-- `value`: tag value
+Count how many changesets have a comment tag:
 
-Example query: count how many changesets have a created\_by=\* tag.
+    SELECT COUNT(*)
+    FROM osm_changeset
+    WHERE tags ? 'comment';
 
-    select count(*) 
-    from osm_changeset, osm_changeset_tags 
-    where changeset_id = id and key = 'created_by';
+Find all changesets that were created by JOSM:
 
+    SELECT COUNT(*)
+    FROM osm_changeset
+    WHERE tags -> 'created_by' LIKE 'JOSM%';
+   
 
 License
 ------------
