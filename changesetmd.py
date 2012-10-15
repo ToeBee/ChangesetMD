@@ -30,11 +30,16 @@ class ChangesetMD():
         connection.commit()
     
     def doIncremental(self, connection):
-        """In theory this should be more complicated to correctly deal with changesets that are still open when the dump is created however it seems that only 
-           closed changesets are exported in the dump despite there being a "closed" attribute, which is always true. So we can just go from the newest one in the last dump.
+        """Prepare the table for incremental update and return the last changeset ID 
+
+        For incremental updates we delete all changesets that are newer than the oldest one 
+        marked as being open in the last dump. Then we skip all older changesets while parsing
+        the new file to speed things up. This way we catch any changes that may have been made 
+        to open changesets after the last dump was made.
         """
         print 'preparing for incremental update'
         cursor = connection.cursor()
+        cursor.execute(queries.deleteOpenChangesets)
         cursor.execute(queries.findNewestChangeset)
         return cursor.fetchone()[0]
 

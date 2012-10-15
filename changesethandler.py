@@ -35,6 +35,8 @@ class ChangesetHandler(xml.sax.handler.ContentHandler):
                 self.changeset.numChanges = attrs["num_changes"]
             if "user" in attrs:
                 self.changeset.userName = attrs["user"]
+            if "open" in attrs:
+                self.changeset.open = attrs["open"]
         elif name == "tag":
             self.tags[attrs["k"]] = attrs["v"]
             
@@ -49,9 +51,9 @@ class ChangesetHandler(xml.sax.handler.ContentHandler):
                 '''insert into database'''
                 cursor = self.dbConnection.cursor()
                 cursor.execute('''INSERT into osm_changeset 
-                (id, user_id, created_at, min_lat, max_lat, min_lon, max_lon, closed_at, num_changes, user_name, tags) 
-                values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)''', (self.changeset.id, self.changeset.userId, self.changeset.createTime, self.changeset.minLat, 
-                                                  self.changeset.maxLat, self.changeset.minLon, self.changeset.maxLon, self.changeset.closeTime, 
+                (id, user_id, created_at, min_lat, max_lat, min_lon, max_lon, closed_at, open, num_changes, user_name, tags) 
+                values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)''', (self.changeset.id, self.changeset.userId, self.changeset.createTime, self.changeset.minLat, 
+                                                  self.changeset.maxLat, self.changeset.minLon, self.changeset.maxLon, self.changeset.closeTime, self.changeset.open, 
                                                   self.changeset.numChanges, self.changeset.userName,self.tags))
                 self.insertCount += 1
                 if self.insertCount % 10000 == 0:
@@ -76,3 +78,4 @@ class Changeset():
         self.closeTime = None
         self.numChanges = None
         self.userName = None
+        self.open = None

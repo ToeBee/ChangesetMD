@@ -13,6 +13,7 @@ createChangesetTable = '''CREATE EXTENSION IF NOT EXISTS hstore;
   min_lon numeric(10,7),
   max_lon numeric(10,7),
   closed_at timestamp without time zone,
+  open boolean,
   num_changes integer,
   user_name varchar(255),
   tags hstore
@@ -30,4 +31,8 @@ CREATE INDEX user_id_idx ON osm_changeset(user_id);
 CREATE INDEX created_idx ON osm_changeset(created_at);
 CREATE INDEX tags_idx ON osm_changeset USING GIN(tags);
 '''
+
+deleteOpenChangesets = '''DELETE FROM osm_changeset
+WHERE id >= (SELECT min(id) FROM osm_changeset WHERE open = 'true');'''
+
 findNewestChangeset = '''select max(id) from osm_changeset;'''
