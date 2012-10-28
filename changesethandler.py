@@ -17,26 +17,21 @@ class ChangesetHandler(xml.sax.handler.ContentHandler):
         
     def startElement(self, name, attrs):
         if name == "changeset":
-            self.changeset = Changeset(attrs["id"])
-            if "uid" in attrs:
-                self.changeset.userId = attrs["uid"]
-            self.changeset.createTime = dateutil.parser.parse(attrs["created_at"])
-            if "min_lat" in attrs:
-                self.changeset.minLat = attrs["min_lat"]
-            if "max_lat" in attrs:
-                self.changeset.maxLat = attrs["max_lat"]
-            if "min_lon" in attrs:
-                self.changeset.minLon = attrs["min_lon"]
-            if "max_lon" in attrs:
-                self.changeset.maxLon = attrs["max_lon"]
-            if "closed_at" in attrs:
-                self.changeset.closeTime = dateutil.parser.parse(attrs["closed_at"])
-            if "num_changes" in attrs:
-                self.changeset.numChanges = attrs["num_changes"]
-            if "user" in attrs:
-                self.changeset.userName = attrs["user"]
-            if "open" in attrs:
-                self.changeset.open = attrs["open"]
+            self.changeset = Changeset()
+            self.changeset.id = attrs.get("id")
+            self.changeset.userId = attrs.get('uid', None)
+            self.changeset.createTime = dateutil.parser.parse(attrs.get('created_at'))
+            self.changeset.minLat = attrs.get('min_lat', None)
+            self.changeset.maxLat = attrs.get('max_lat', None)
+            self.changeset.minLon = attrs.get('min_lon', None)
+            self.changeset.maxLon = attrs.get('max_lon', None)
+            if 'closed_at' in attrs:
+                self.changeset.closeTime = dateutil.parser.parse(attrs.get('closed_at'))
+            else:
+                self.changeset.closeTime = None
+            self.changeset.numChanges = attrs.get('num_changes', None)
+            self.changeset.userName = attrs.get('user', None)
+            self.changeset.open = attrs.get('open', None)
         elif name == "tag":
             self.tags[attrs["k"]] = attrs["v"]
             
@@ -67,15 +62,4 @@ class ChangesetHandler(xml.sax.handler.ContentHandler):
         print 'finished inserting {:,} records'.format(self.insertCount)
             
 class Changeset():
-    def __init__(self, changeId):
-        self.id = changeId
-        self.userId = None
-        self.createTime = None
-        self.minLat = None
-        self.maxLat = None
-        self.minLon = None
-        self.maxLon = None
-        self.closeTime = None
-        self.numChanges = None
-        self.userName = None
-        self.open = None
+    pass
