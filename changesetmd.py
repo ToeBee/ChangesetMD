@@ -5,13 +5,18 @@ from OpenStreetmap into a postgres database for querying.
 
 @author: Toby Murray
 '''
-import os, pwd
+import os, pwd, sys
 import argparse
 import xml.sax
 import psycopg2
 import psycopg2.extras
 import changesethandler
 import queries
+try:
+    from bz2file import BZ2File
+    bz2Support = True
+except ImportError:
+    bz2Support = False
 
 
 
@@ -79,7 +84,14 @@ if __name__ == '__main__':
         handler = changesethandler.ChangesetHandler(conn, newestChangeset)
         parser.setContentHandler(handler)
         print 'parsing changeset file'
-        parser.parse(args.fileName)
+        if(args.fileName[-4:] == '.bz2'):
+            if(bz2Support):
+                parser.parse(BZ2File(args.fileName))
+            else:
+                print 'ERROR: bzip2 support not available. Unzip file first or install bz2file'
+                sys.exit(1)
+        else:
+            parser.parse(args.fileName)
         if not args.incrementalUpdate:
             cursor = conn.cursor()
             print 'creating constraints'
