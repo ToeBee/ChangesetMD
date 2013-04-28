@@ -7,11 +7,13 @@ from OpenStreetmap into a postgres database for querying.
 '''
 import os, pwd, sys
 import argparse
-import xml.sax
 import psycopg2
 import psycopg2.extras
-import changesethandler
 import queries
+from lxml import etree
+from datetime import datetime
+from datetime import timedelta
+
 try:
     from bz2file import BZ2File
     bz2Support = True
@@ -48,6 +50,49 @@ class ChangesetMD():
         cursor.execute(queries.findNewestChangeset)
         return cursor.fetchone()[0]
 
+def parseFile(dbConn, newestChangeset, changesetFile):
+    parsedCount = 0
+    skippedCount = 0
+    insertedCount = 0
+    startTime = datetime.now()
+    context = etree.iterparse(changesetFile);
+    action, root = context.next()
+    for action, elem in context:
+        if(elem.tag != 'changeset'):
+            continue
+        
+        parsedCount += 1
+        if newestChangeset != -1 and long(elem.attrib['id']) <= newestChangeset:
+                skippedCount += 1
+        else:
+            tags = {}
+            for tag in elem.iterchildren(tag='tag'):
+                tags[tag.attrib['k']] = tag.attrib['v']
+            
+            #insertQuery = 
+            cursor = dbConn.cursor()
+            cursor.execute('''INSERT into osm_changeset 
+                (id, user_id, created_at, min_lat, max_lat, min_lon, max_lon, closed_at, open, num_changes, user_name, tags) 
+                values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)''', 
+                ( elem.attrib['id'], elem.attrib.get('uid', None), elem.attrib['created_at'], elem.attrib.get('min_lat', None), 
+                  elem.attrib.get('max_lat', None), elem.attrib.get('min_lon', None), elem.attrib.get('max_lon', None), 
+                  elem.attrib.get('closed_at', None), elem.attrib.get('open', None), 
+                  elem.attrib.get('num_changes', None), elem.attrib.get('user', None), tags))
+            insertedCount += 1
+                    
+        if((parsedCount % 10000) == 0):
+            print "parsed {:,}".format(parsedCount)
+            print "skipped {:,}".format(skippedCount)
+            print "inserted {:,}".format(insertedCount)
+            print "cumulative rate: ", parsedCount/timedelta.total_seconds(datetime.now() - startTime)
+        elem.clear()
+        root.clear()
+    dbConn.commit()
+    print "parsing complete"
+    print "parsed {:,}".format(parsedCount)
+    print "skipped {:,}".format(skippedCount)
+    print "inserted {:,}".format(insertedCount)
+
 if __name__ == '__main__':
     argParser = argparse.ArgumentParser(description="Parse OSM Changeset metadata into a database")
     argParser.add_argument('-t', '--trunc', action='store_true', default=False, dest='truncateTables', help='Truncate existing tables (also drops indexes)')
@@ -80,18 +125,19 @@ if __name__ == '__main__':
     psycopg2.extras.register_hstore(conn)
         
     if not (args.fileName is None):
-        parser = xml.sax.make_parser()
-        handler = changesethandler.ChangesetHandler(conn, newestChangeset)
-        parser.setContentHandler(handler)
+        
         print 'parsing changeset file'
+        changesetFile = None
         if(args.fileName[-4:] == '.bz2'):
             if(bz2Support):
-                parser.parse(BZ2File(args.fileName))
+                parseFile(conn, newestChangeset, BZ2File(args.fileName))
             else:
                 print 'ERROR: bzip2 support not available. Unzip file first or install bz2file'
                 sys.exit(1)
         else:
-            parser.parse(args.fileName)
+            parseFile(conn, newestChangeset, open(args.fileName, 'r'))
+            
+        
         if not args.incrementalUpdate:
             cursor = conn.cursor()
             print 'creating constraints'
@@ -99,10 +145,6 @@ if __name__ == '__main__':
             print 'creating indexes'
             cursor.execute(queries.createIndexes)
             
-        conn.commit()
         conn.close()
     
     print 'All done. Enjoy your (meta)data!'
-    
-
-        
