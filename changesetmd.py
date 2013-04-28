@@ -69,7 +69,6 @@ def parseFile(dbConn, newestChangeset, changesetFile):
             for tag in elem.iterchildren(tag='tag'):
                 tags[tag.attrib['k']] = tag.attrib['v']
             
-            #insertQuery = 
             cursor = dbConn.cursor()
             cursor.execute('''INSERT into osm_changeset 
                 (id, user_id, created_at, min_lat, max_lat, min_lon, max_lon, closed_at, open, num_changes, user_name, tags) 
@@ -81,10 +80,8 @@ def parseFile(dbConn, newestChangeset, changesetFile):
             insertedCount += 1
                     
         if((parsedCount % 10000) == 0):
-            print "parsed {:,}".format(parsedCount)
-            print "skipped {:,}".format(skippedCount)
-            print "inserted {:,}".format(insertedCount)
-            print "cumulative rate: ", parsedCount/timedelta.total_seconds(datetime.now() - startTime)
+            print "parsed %s skipped %s inserted %s" % ('{:,}'.format(parsedCount), '{:,}'.format(skippedCount), '{:,}'.format(insertedCount))
+            print "cumulative rate: %s/sec" % '{:,.0f}'.format(parsedCount/timedelta.total_seconds(datetime.now() - startTime))
         elem.clear()
         root.clear()
     dbConn.commit()
