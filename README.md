@@ -11,8 +11,8 @@ Setup
 
 ChangesetMD works with python 2.7.
 
-Aside from postgresql, ChangesetMD depends on the python libraries psycopg2 and dateutil.
-On Debian-based systems this means installing the python-psycopg2 and python-dateutil packages.
+Aside from postgresql, ChangesetMD depends on the python libraries psycopg2 and lxml.
+On Debian-based systems this means installing the python-psycopg2 and python-lxml packages.
 
 If you want to parse the changeset file without first unzipping it, you will also need to install the [bz2file library](http://pypi.python.org/pypi/bz2file) since the built in bz2 library can not handle multi-stream bzip files.
 
@@ -46,11 +46,11 @@ Optional database user/password/host arguments can be used to access a postgres 
 
 Notes
 ------------
-- Prints a message every 10,000 records.
-- Takes 2-3 hours to import the current dump on a decent home computer.
+- Prints a status message every 10,000 records.
+- Takes 1-2 hours to import the current dump on a decent home computer.
 - Might be faster to process the XML into a flat file and then use the postgres COPY command to do a bulk load but this would make incremental updates a little harder
 - I have commonly queried fields indexed. Depending on what you want to do, you may need more indexes.
-- The incremental mode is faster (takes about 1 hour) but still kind of slow. It is CPU bound on XML parsing so it probably needs to be switched to a faster XML parser to improve performance.
+- The incremental mode is much faster if you want to update an existing database. Depending on how old the data in the database is it could be as little as 5ish minutes.
 
 
 Table Structure
