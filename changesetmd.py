@@ -86,8 +86,11 @@ class ChangesetMD():
             if((parsedCount % 10000) == 0):
                 print "parsed %s skipped %s inserted %s" % ('{:,}'.format(parsedCount), '{:,}'.format(skippedCount), '{:,}'.format(insertedCount))
                 print "cumulative rate: %s/sec" % '{:,.0f}'.format(parsedCount/timedelta.total_seconds(datetime.now() - startTime))
+            
+            #clear everything we don't need from memory to avoid leaking
             elem.clear()
-            root.clear()
+            while elem.getprevious() is not None:
+                del elem.getparent()[0]
         connection.commit()
         print "parsing complete"
         print "parsed {:,}".format(parsedCount)
