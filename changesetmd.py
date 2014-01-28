@@ -12,6 +12,8 @@ import argparse
 import psycopg2
 import psycopg2.extras
 import queries
+import yaml
+import urllib2
 from lxml import etree
 from datetime import datetime
 from datetime import timedelta
@@ -24,6 +26,8 @@ except ImportError:
 
 
 class ChangesetMD():
+    #baseURL = 'http://localhost/changesets/'
+
     def truncateTables(self, connection):
         print 'truncating tables'
         cursor = connection.cursor()
@@ -58,6 +62,37 @@ class ChangesetMD():
                     values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
                     (id, userId, createdAt, minLat, maxLat, minLon, maxLon, closedAt, open, numChanges, userName, tags))
 
+    def getReplicationFile(self, sequenceNumber):
+        baseURL = 'http://planet.osm.org/replication/changesets/'
+        subdir = sequenceNumber / 1000
+        fileName = sequenceNumber % 1000
+        print subdir
+        print fileName
+        
+        fileUrl = baseURL + '000/' + str(subdir) + '/' + str(fileName) + '.osm.gz'
+        return BZ2File(urllib2.urlopen(fileUrl))      
+        
+    def doReplication(self):
+        baseURL = 'http://planet.osm.org/replication/changesets/'
+        #TODO: locking to prevent two concurrent updates
+        print 'checking for replication update'
+        localState = yaml.load(open(os.path.expanduser('~/.changesetmd')))
+        print localState['sequence']
+        remoteState = yaml.load(urllib2.urlopen(baseURL + 'state.yaml'))
+        print remoteState['sequence']
+        currentSequence = localState['sequence']
+        processedDiffs = 0
+        md = ChangesetMD()
+        while currentSequence < remoteState['sequence']:
+            replicationFile = self.getReplicationFile(currentSequence)
+            md.p
+            currentSequence +=1
+            
+        #read local state file, throw error if none found
+        #read remote current state file
+        #if remote is newer than local, initiate diff parsig
+        pass
+        
     def parseFile(self, connection, newestChangeset, changesetFile):
         parsedCount = 0
         skippedCount = 0
@@ -108,6 +143,7 @@ if __name__ == '__main__':
     argParser.add_argument('-d', '--database', action='store', dest='dbName', help='Target database', required=True)
     argParser.add_argument('-f', '--file', action='store', dest='fileName', help='OSM changeset file to parse')
     argParser.add_argument('-i', '--incremental', action='store_true', default=False, dest='incrementalUpdate', help='Perform incremental update. Only import new changesets')
+    argParser.add_argument('-r', '--replicate', action='store_true', default=False, dest='replication', help='update database from minutely replication diffs')
     args = argParser.parse_args()
 
     if not (args.dbHost is None):
@@ -150,5 +186,9 @@ if __name__ == '__main__':
             cursor.execute(queries.createIndexes)
 
         conn.close()
+
+    if args.replication:
+        #do replication
+        md.doReplication()
 
     print 'All done. Enjoy your (meta)data!'
