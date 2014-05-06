@@ -6,7 +6,7 @@ from OpenStreetmap into a postgres database for querying.
 @author: Toby Murray
 '''
 import os
-import pwd
+#import pwd
 import sys
 import argparse
 import psycopg2
@@ -103,7 +103,7 @@ if __name__ == '__main__':
     argParser.add_argument('-t', '--trunc', action='store_true', default=False, dest='truncateTables', help='Truncate existing tables (also drops indexes)')
     argParser.add_argument('-c', '--create', action='store_true', default=False, dest='createTables', help='Create tables')
     argParser.add_argument('--host', action='store', dest='dbHost', help='Database hostname')
-    argParser.add_argument('-u', '--user', action='store', dest='dbUser', default=pwd.getpwuid(os.getuid())[0], help='Database username (default: OS username)')
+    argParser.add_argument('-u', '--user', action='store', dest='dbUser', default=os.path.expanduser('~').split('\\')[2], help='Database username (default: OS username)')
     argParser.add_argument('-p', '--password', action='store', dest='dbPass', default='', help='Database password (default: blank)')
     argParser.add_argument('-d', '--database', action='store', dest='dbName', help='Target database', required=True)
     argParser.add_argument('-f', '--file', action='store', dest='fileName', help='OSM changeset file to parse')
