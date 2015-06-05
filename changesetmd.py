@@ -22,11 +22,11 @@ try:
 except ImportError:
     bz2Support = False
 
-
 class ChangesetMD():
     def truncateTables(self, connection):
         print 'truncating tables'
         cursor = connection.cursor()
+        cursor.execute("TRUNCATE TALBE osm_changeset_note CASCADE;")
         cursor.execute("TRUNCATE TABLE osm_changeset CASCADE;")
         cursor.execute(queries.dropIndexes)
         connection.commit()
@@ -76,6 +76,22 @@ class ChangesetMD():
                 tags = {}
                 for tag in elem.iterchildren(tag='tag'):
                     tags[tag.attrib['k']] = tag.attrib['v']
+
+                comments = []
+                for discussion in elem.iterchildren(tag='discussion'):
+                    print 'in discussion'
+                    comment = dict()
+                    for commentElement in discussion.iterchildren(tag='comment'):
+                        comment['uid'] = commentElement.attrib.get('uid')
+                        comment['user'] = commentElement.attrib.get('user')
+                        comment['date'] = commentElement.attrib.get('date')
+                        print 'got comment: ', comment
+                        for text in commentElement.iterchildren(tag='text'):
+                            print 'got comment text'
+                            comment['text'] = text.text
+                            print text.text
+                        print 'full comment:', comment
+                        comments.append(comment)
 
                 self.insertNew(connection, elem.attrib['id'], elem.attrib.get('uid', None), elem.attrib['created_at'], elem.attrib.get('min_lat', None),
                       elem.attrib.get('max_lat', None), elem.attrib.get('min_lon', None), elem.attrib.get('max_lon', None),
