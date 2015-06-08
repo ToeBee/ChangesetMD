@@ -19,7 +19,7 @@ createChangesetTable = '''CREATE EXTENSION IF NOT EXISTS hstore;
   tags hstore
 );
 CREATE TABLE osm_changeset_comment (
-  comment_note_id bigint not null,
+  comment_changeset_id bigint not null REFERENCES osm_changeset (id),
   comment_user_id bigint not null,
   comment_user_name varchar(255) not null,
   comment_date timestamp without time zone not null,

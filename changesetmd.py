@@ -59,7 +59,7 @@ class ChangesetMD():
                     (id, userId, createdAt, minLat, maxLat, minLon, maxLon, closedAt, open, numChanges, userName, tags))
         for comment in comments:
             cursor.execute('''INSERT into osm_changeset_comment
-                    (comment_note_id, comment_user_id, comment_user_name, comment_date, comment_text)
+                    (comment_changeset_id, comment_user_id, comment_user_name, comment_date, comment_text)
                     values (%s,%s,%s,%s,%s)''',
                     (id, comment['uid'], comment['user'], comment['date'], comment['text']))
 
