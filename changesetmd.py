@@ -84,7 +84,6 @@ class ChangesetMD():
 
                 comments = []
                 for discussion in elem.iterchildren(tag='discussion'):
-                    print 'in discussion'
                     comment = dict()
                     for commentElement in discussion.iterchildren(tag='comment'):
                         comment['uid'] = commentElement.attrib.get('uid')
@@ -94,10 +93,12 @@ class ChangesetMD():
                             comment['text'] = text.text
                         comments.append(comment)
 
-                self.insertNew(connection, elem.attrib['id'], elem.attrib.get('uid', None), elem.attrib['created_at'], elem.attrib.get('min_lat', None),
-                      elem.attrib.get('max_lat', None), elem.attrib.get('min_lon', None), elem.attrib.get('max_lon', None),
-                      elem.attrib.get('closed_at', None), elem.attrib.get('open', None),
-                      elem.attrib.get('num_changes', None), elem.attrib.get('user', None), tags, comments)
+                self.insertNew(connection, elem.attrib['id'], elem.attrib.get('uid', None),
+                               elem.attrib['created_at'], elem.attrib.get('min_lat', None),
+                               elem.attrib.get('max_lat', None), elem.attrib.get('min_lon', None),
+                               elem.attrib.get('max_lon', None),elem.attrib.get('closed_at', None),
+                               elem.attrib.get('open', None), elem.attrib.get('num_changes', None),
+                               elem.attrib.get('user', None), tags, comments)
                 insertedCount += 1
 
             if((parsedCount % 10000) == 0):
