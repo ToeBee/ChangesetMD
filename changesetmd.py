@@ -102,18 +102,21 @@ if __name__ == '__main__':
     argParser = argparse.ArgumentParser(description="Parse OSM Changeset metadata into a database")
     argParser.add_argument('-t', '--trunc', action='store_true', default=False, dest='truncateTables', help='Truncate existing tables (also drops indexes)')
     argParser.add_argument('-c', '--create', action='store_true', default=False, dest='createTables', help='Create tables')
-    argParser.add_argument('--host', action='store', dest='dbHost', help='Database hostname')
-    argParser.add_argument('-u', '--user', action='store', dest='dbUser', default=os.path.expanduser('~').split('\\')[2], help='Database username (default: OS username)')
+    argParser.add_argument('-H', '--host', action='store', dest='dbHost', help='Database hostname')
+    argParser.add_argument('-P', '--port', action='store', dest='dbPort', default='5432',help='Specify the port. If not specified, database connection defaults to 5432.')
+    argParser.add_argument('-u', '--user', action='store', dest='dbUser', default=os.path.expanduser('~').split('\\')[2], help='Database username (default: OS username)')    
     argParser.add_argument('-p', '--password', action='store', dest='dbPass', default='', help='Database password (default: blank)')
     argParser.add_argument('-d', '--database', action='store', dest='dbName', help='Target database', required=True)
     argParser.add_argument('-f', '--file', action='store', dest='fileName', help='OSM changeset file to parse')
     argParser.add_argument('-i', '--incremental', action='store_true', default=False, dest='incrementalUpdate', help='Perform incremental update. Only import new changesets')
+    
+
     args = argParser.parse_args()
 
     if not (args.dbHost is None):
-        conn = psycopg2.connect(database=args.dbName, user=args.dbUser, password=args.dbPass, host=args.dbHost)
+        conn = psycopg2.connect(database=args.dbName, user=args.dbUser, password=args.dbPass, host=args.dbHost, port=args.dbPort)
     else:
-        conn = psycopg2.connect(database=args.dbName, user=args.dbUser, password=args.dbPass)
+        conn = psycopg2.connect(database=args.dbName, user=args.dbUser, password=args.dbPass, port=args.dbPort)
 
     md = ChangesetMD()
     if args.truncateTables:
