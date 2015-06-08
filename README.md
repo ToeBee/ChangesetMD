@@ -55,10 +55,10 @@ Notes
 
 Table Structure
 ------------
-ChangesetMD populates one table with the following structure:
+ChangesetMD populates two tables with the following structure:
 
-osm\_changeset:
-
+osm\_changeset:  
+Primary table of all changesets with the following columns:
 - `id`: changeset ID
 - `created_at/closed_at`: create/closed time 
 - `num_changes`: number of objects changed
@@ -68,6 +68,13 @@ osm\_changeset:
 - `tags`: an hstore column holding all the tags of the changeset
 
 Note that all fields except for id and created\_at can be null.
+
+osm\_changeset\_comment:  
+All comments made on changesets via the new commenting system  
+- `comment_changeset_id`: Foreign key to the changeset ID
+- `comment_user_id`: numeric OSM user ID
+- `comment_user_name`: OSM username
+- `comment_date`: timestamp of when the comment was created
 
 If you are unfamiliar with hstore and how to query it, see the [postgres documentation](http://www.postgresql.org/docs/9.2/static/hstore.html)
 
