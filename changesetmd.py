@@ -99,6 +99,10 @@ class ChangesetMD():
 
 
 if __name__ == '__main__':
+    beginTime = datetime.now()
+    endTime = None
+    timeCost = None
+
     argParser = argparse.ArgumentParser(description="Parse OSM Changeset metadata into a database")
     argParser.add_argument('-t', '--trunc', action='store_true', default=False, dest='truncateTables', help='Truncate existing tables (also drops indexes)')
     argParser.add_argument('-c', '--create', action='store_true', default=False, dest='createTables', help='Create tables')
@@ -153,5 +157,10 @@ if __name__ == '__main__':
             cursor.execute(queries.createIndexes)
 
         conn.close()
+
+    endTime = datetime.now()
+    timeCost = endTime - beginTime
+
+    print 'Processing time cost is ', timeCost
 
     print 'All done. Enjoy your (meta)data!'
