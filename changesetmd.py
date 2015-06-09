@@ -5,6 +5,7 @@ from OpenStreetmap into a postgres database for querying.
 
 @author: Toby Murray
 '''
+
 import os
 import sys
 import argparse
@@ -114,13 +115,25 @@ if __name__ == '__main__':
     argParser.add_argument('-f', '--file', action='store', dest='fileName', help='OSM changeset file to parse')
     argParser.add_argument('-i', '--incremental', action='store_true', default=False, dest='incrementalUpdate', help='Perform incremental update. Only import new changesets')
     
-
     args = argParser.parse_args()
 
+    #Identify default port via PGPORT environment variable
+    inputDBPort = args.dbPort
+
+    if inputDBPort==None:
+        for key in os.environ.keys():
+            if key=='PGPORT':
+                inputDBPort == os.environ[key]
+                break
+
+        #Default Port to 5432 if no port is specified at commandline and the PGPORT does not exist
+        if inputDBPort==None:
+            inputDBPort = '5432'
+    
     if not (args.dbHost is None):
-        conn = psycopg2.connect(database=args.dbName, user=args.dbUser, password=args.dbPass, host=args.dbHost, port=args.dbPort)
+        conn = psycopg2.connect(database=args.dbName, user=args.dbUser, password=args.dbPass, host=dbHost, port=inputDBPort)
     else:
-        conn = psycopg2.connect(database=args.dbName, user=args.dbUser, password=args.dbPass, port=args.dbPort)
+        conn = psycopg2.connect(database=args.dbName, user=args.dbUser, password=args.dbPass, port=inputDBPort)
 
     md = ChangesetMD()
     if args.truncateTables:
