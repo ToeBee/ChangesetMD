@@ -84,8 +84,8 @@ class ChangesetMD():
 
                 comments = []
                 for discussion in elem.iterchildren(tag='discussion'):
-                    comment = dict()
                     for commentElement in discussion.iterchildren(tag='comment'):
+                        comment = dict()
                         comment['uid'] = commentElement.attrib.get('uid')
                         comment['user'] = commentElement.attrib.get('user')
                         comment['date'] = commentElement.attrib.get('date')
