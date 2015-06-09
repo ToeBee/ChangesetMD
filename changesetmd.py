@@ -123,7 +123,7 @@ if __name__ == '__main__':
     if inputDBPort==None:
         for key in os.environ.keys():
             if key=='PGPORT':
-                inputDBPort == os.environ[key]
+                inputDBPort=os.environ[key]
                 break
 
         #Default Port to 5432 if no port is specified at commandline and the PGPORT does not exist
