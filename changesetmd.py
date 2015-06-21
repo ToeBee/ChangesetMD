@@ -15,7 +15,6 @@ import queries
 from lxml import etree
 from datetime import datetime
 from datetime import timedelta
-import getpass
 
 try:
     from bz2file import BZ2File
@@ -108,32 +107,17 @@ if __name__ == '__main__':
     argParser.add_argument('-t', '--trunc', action='store_true', default=False, dest='truncateTables', help='Truncate existing tables (also drops indexes)')
     argParser.add_argument('-c', '--create', action='store_true', default=False, dest='createTables', help='Create tables')
     argParser.add_argument('-H', '--host', action='store', dest='dbHost', help='Database hostname')
-    argParser.add_argument('-P', '--port', action='store', dest='dbPort', default=None,help='Specify the port. If not specified, database connection defaults to PGPORT or port in libpg compilation.')
-    argParser.add_argument('-u', '--user', action='store', dest='dbUser', default=getpass.getuser(), help='Database username (default: OS username)')    
-    argParser.add_argument('-p', '--password', action='store', dest='dbPass', default='', help='Database password (default: blank)')
+    argParser.add_argument('-P', '--port', action='store', dest='dbPort', default=None, help='Database port')
+    argParser.add_argument('-u', '--user', action='store', dest='dbUser', default=None, help='Database username')
+    argParser.add_argument('-p', '--password', action='store', dest='dbPass', default=None, help='Database password')
     argParser.add_argument('-d', '--database', action='store', dest='dbName', help='Target database', required=True)
     argParser.add_argument('-f', '--file', action='store', dest='fileName', help='OSM changeset file to parse')
     argParser.add_argument('-i', '--incremental', action='store_true', default=False, dest='incrementalUpdate', help='Perform incremental update. Only import new changesets')
     
     args = argParser.parse_args()
 
-    #Identify default port via PGPORT environment variable
-    inputDBPort = args.dbPort
+    conn = psycopg2.connect(database=args.dbName, user=args.dbUser, password=args.dbPass, host=args.dbHost, port=args.dbPort)
 
-    if inputDBPort==None:
-        for key in os.environ.keys():
-            if key=='PGPORT':
-                inputDBPort=os.environ[key]
-                break
-
-        #Default Port to 5432 if no port is specified at commandline and the PGPORT does not exist
-        if inputDBPort==None:
-            inputDBPort = '5432'
-    
-    if not (args.dbHost is None):
-        conn = psycopg2.connect(database=args.dbName, user=args.dbUser, password=args.dbPass, host=dbHost, port=inputDBPort)
-    else:
-        conn = psycopg2.connect(database=args.dbName, user=args.dbUser, password=args.dbPass, port=inputDBPort)
 
     md = ChangesetMD()
     if args.truncateTables:
