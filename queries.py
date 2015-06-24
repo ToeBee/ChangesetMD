@@ -17,7 +17,14 @@ createChangesetTable = '''CREATE EXTENSION IF NOT EXISTS hstore;
   num_changes integer,
   user_name varchar(255),
   tags hstore
-)
+);
+CREATE TABLE osm_changeset_comment (
+  comment_changeset_id bigint not null,
+  comment_user_id bigint not null,
+  comment_user_name varchar(255) not null,
+  comment_date timestamp without time zone not null,
+  comment_text text not null
+);
 '''
 
 dropIndexes = '''ALTER TABLE osm_changeset DROP CONSTRAINT IF EXISTS osm_changeset_pkey CASCADE;

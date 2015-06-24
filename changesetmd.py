@@ -22,11 +22,11 @@ try:
 except ImportError:
     bz2Support = False
 
-
 class ChangesetMD():
     def truncateTables(self, connection):
         print 'truncating tables'
         cursor = connection.cursor()
+        cursor.execute("TRUNCATE TABLE osm_changeset_comment CASCADE;")
         cursor.execute("TRUNCATE TABLE osm_changeset CASCADE;")
         cursor.execute(queries.dropIndexes)
         connection.commit()
@@ -51,12 +51,17 @@ class ChangesetMD():
         cursor.execute(queries.findNewestChangeset)
         return cursor.fetchone()[0]
 
-    def insertNew(self, connection, id, userId, createdAt, minLat, maxLat, minLon, maxLon, closedAt, open, numChanges, userName, tags):
+    def insertNew(self, connection, id, userId, createdAt, minLat, maxLat, minLon, maxLon, closedAt, open, numChanges, userName, tags, comments):
         cursor = connection.cursor()
         cursor.execute('''INSERT into osm_changeset
                     (id, user_id, created_at, min_lat, max_lat, min_lon, max_lon, closed_at, open, num_changes, user_name, tags)
                     values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
                     (id, userId, createdAt, minLat, maxLat, minLon, maxLon, closedAt, open, numChanges, userName, tags))
+        for comment in comments:
+            cursor.execute('''INSERT into osm_changeset_comment
+                    (comment_changeset_id, comment_user_id, comment_user_name, comment_date, comment_text)
+                    values (%s,%s,%s,%s,%s)''',
+                    (id, comment['uid'], comment['user'], comment['date'], comment['text']))
 
     def parseFile(self, connection, newestChangeset, changesetFile):
         parsedCount = 0
@@ -77,10 +82,23 @@ class ChangesetMD():
                 for tag in elem.iterchildren(tag='tag'):
                     tags[tag.attrib['k']] = tag.attrib['v']
 
-                self.insertNew(connection, elem.attrib['id'], elem.attrib.get('uid', None), elem.attrib['created_at'], elem.attrib.get('min_lat', None),
-                      elem.attrib.get('max_lat', None), elem.attrib.get('min_lon', None), elem.attrib.get('max_lon', None),
-                      elem.attrib.get('closed_at', None), elem.attrib.get('open', None),
-                      elem.attrib.get('num_changes', None), elem.attrib.get('user', None), tags)
+                comments = []
+                for discussion in elem.iterchildren(tag='discussion'):
+                    for commentElement in discussion.iterchildren(tag='comment'):
+                        comment = dict()
+                        comment['uid'] = commentElement.attrib.get('uid')
+                        comment['user'] = commentElement.attrib.get('user')
+                        comment['date'] = commentElement.attrib.get('date')
+                        for text in commentElement.iterchildren(tag='text'):
+                            comment['text'] = text.text
+                        comments.append(comment)
+
+                self.insertNew(connection, elem.attrib['id'], elem.attrib.get('uid', None),
+                               elem.attrib['created_at'], elem.attrib.get('min_lat', None),
+                               elem.attrib.get('max_lat', None), elem.attrib.get('min_lon', None),
+                               elem.attrib.get('max_lon', None),elem.attrib.get('closed_at', None),
+                               elem.attrib.get('open', None), elem.attrib.get('num_changes', None),
+                               elem.attrib.get('user', None), tags, comments)
                 insertedCount += 1
 
             if((parsedCount % 10000) == 0):
