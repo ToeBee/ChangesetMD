@@ -38,8 +38,3 @@ CREATE INDEX user_id_idx ON osm_changeset(user_id);
 CREATE INDEX created_idx ON osm_changeset(created_at);
 CREATE INDEX tags_idx ON osm_changeset USING GIN(tags);
 '''
-
-deleteOpenChangesets = '''DELETE FROM osm_changeset
-WHERE id >= (SELECT min(id) FROM osm_changeset WHERE open = 'true');'''
-
-findNewestChangeset = '''select max(id) from osm_changeset;'''

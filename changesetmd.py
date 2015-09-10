@@ -37,20 +37,6 @@ class ChangesetMD():
         cursor.execute(queries.createChangesetTable)
         connection.commit()
 
-    def doIncremental(self, connection):
-        """Prepare the table for incremental update and return the last changeset ID
-
-        For incremental updates we delete all changesets that are newer than the oldest one
-        marked as being open in the last dump. Then we skip all older changesets while parsing
-        the new file to speed things up. This way we catch any changes that may have been made
-        to open changesets after the last dump was made.
-        """
-        print 'preparing for incremental update'
-        cursor = connection.cursor()
-        cursor.execute(queries.deleteOpenChangesets)
-        cursor.execute(queries.findNewestChangeset)
-        return cursor.fetchone()[0]
-
     def insertNew(self, connection, id, userId, createdAt, minLat, maxLat, minLon, maxLon, closedAt, open, numChanges, userName, tags, comments):
         cursor = connection.cursor()
         cursor.execute('''INSERT into osm_changeset
@@ -63,10 +49,8 @@ class ChangesetMD():
                     values (%s,%s,%s,%s,%s)''',
                     (id, comment['uid'], comment['user'], comment['date'], comment['text']))
 
-    def parseFile(self, connection, newestChangeset, changesetFile):
+    def parseFile(self, connection, changesetFile):
         parsedCount = 0
-        skippedCount = 0
-        insertedCount = 0
         startTime = datetime.now()
         context = etree.iterparse(changesetFile)
         action, root = context.next()
@@ -75,34 +59,31 @@ class ChangesetMD():
                 continue
 
             parsedCount += 1
-            if newestChangeset != -1 and long(elem.attrib['id']) <= newestChangeset:
-                    skippedCount += 1
-            else:
-                tags = {}
-                for tag in elem.iterchildren(tag='tag'):
-                    tags[tag.attrib['k']] = tag.attrib['v']
 
-                comments = []
-                for discussion in elem.iterchildren(tag='discussion'):
-                    for commentElement in discussion.iterchildren(tag='comment'):
-                        comment = dict()
-                        comment['uid'] = commentElement.attrib.get('uid')
-                        comment['user'] = commentElement.attrib.get('user')
-                        comment['date'] = commentElement.attrib.get('date')
-                        for text in commentElement.iterchildren(tag='text'):
-                            comment['text'] = text.text
-                        comments.append(comment)
+            tags = {}
+            for tag in elem.iterchildren(tag='tag'):
+                tags[tag.attrib['k']] = tag.attrib['v']
 
-                self.insertNew(connection, elem.attrib['id'], elem.attrib.get('uid', None),
-                               elem.attrib['created_at'], elem.attrib.get('min_lat', None),
-                               elem.attrib.get('max_lat', None), elem.attrib.get('min_lon', None),
-                               elem.attrib.get('max_lon', None),elem.attrib.get('closed_at', None),
-                               elem.attrib.get('open', None), elem.attrib.get('num_changes', None),
-                               elem.attrib.get('user', None), tags, comments)
-                insertedCount += 1
+            comments = []
+            for discussion in elem.iterchildren(tag='discussion'):
+                for commentElement in discussion.iterchildren(tag='comment'):
+                    comment = dict()
+                    comment['uid'] = commentElement.attrib.get('uid')
+                    comment['user'] = commentElement.attrib.get('user')
+                    comment['date'] = commentElement.attrib.get('date')
+                    for text in commentElement.iterchildren(tag='text'):
+                        comment['text'] = text.text
+                    comments.append(comment)
+
+            self.insertNew(connection, elem.attrib['id'], elem.attrib.get('uid', None),
+                           elem.attrib['created_at'], elem.attrib.get('min_lat', None),
+                           elem.attrib.get('max_lat', None), elem.attrib.get('min_lon', None),
+                           elem.attrib.get('max_lon', None),elem.attrib.get('closed_at', None),
+                           elem.attrib.get('open', None), elem.attrib.get('num_changes', None),
+                           elem.attrib.get('user', None), tags, comments)
 
             if((parsedCount % 10000) == 0):
-                print "parsed %s skipped %s inserted %s" % ('{:,}'.format(parsedCount), '{:,}'.format(skippedCount), '{:,}'.format(insertedCount))
+                print "parsed %s" % ('{:,}'.format(parsedCount))
                 print "cumulative rate: %s/sec" % '{:,.0f}'.format(parsedCount/timedelta.total_seconds(datetime.now() - startTime))
             
             #clear everything we don't need from memory to avoid leaking
@@ -112,8 +93,6 @@ class ChangesetMD():
         connection.commit()
         print "parsing complete"
         print "parsed {:,}".format(parsedCount)
-        print "skipped {:,}".format(skippedCount)
-        print "inserted {:,}".format(insertedCount)
 
 
 if __name__ == '__main__':
@@ -130,7 +109,6 @@ if __name__ == '__main__':
     argParser.add_argument('-p', '--password', action='store', dest='dbPass', default=None, help='Database password')
     argParser.add_argument('-d', '--database', action='store', dest='dbName', help='Target database', required=True)
     argParser.add_argument('-f', '--file', action='store', dest='fileName', help='OSM changeset file to parse')
-    argParser.add_argument('-i', '--incremental', action='store_true', default=False, dest='incrementalUpdate', help='Perform incremental update. Only import new changesets')
     
     args = argParser.parse_args()
 
@@ -144,11 +122,6 @@ if __name__ == '__main__':
     if args.createTables:
         md.createTables(conn)
 
-    newestChangeset = -1
-    if args.incrementalUpdate:
-        newestChangeset = md.doIncremental(conn)
-        print "Performing incremental update from changeset {:,}".format(newestChangeset)
-
     psycopg2.extras.register_hstore(conn)
 
     if not (args.fileName is None):
@@ -157,19 +130,18 @@ if __name__ == '__main__':
         changesetFile = None
         if(args.fileName[-4:] == '.bz2'):
             if(bz2Support):
-                md.parseFile(conn, newestChangeset, BZ2File(args.fileName))
+                md.parseFile(conn, BZ2File(args.fileName))
             else:
                 print 'ERROR: bzip2 support not available. Unzip file first or install bz2file'
                 sys.exit(1)
         else:
-            md.parseFile(conn, newestChangeset, open(args.fileName, 'r'))
+            md.parseFile(conn, open(args.fileName, 'r'))
 
-        if not args.incrementalUpdate:
-            cursor = conn.cursor()
-            print 'creating constraints'
-            cursor.execute(queries.createConstraints)
-            print 'creating indexes'
-            cursor.execute(queries.createIndexes)
+        cursor = conn.cursor()
+        print 'creating constraints'
+        cursor.execute(queries.createConstraints)
+        print 'creating indexes'
+        cursor.execute(queries.createIndexes)
 
         conn.close()
 
