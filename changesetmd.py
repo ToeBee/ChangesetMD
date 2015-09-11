@@ -12,6 +12,7 @@ import argparse
 import psycopg2
 import psycopg2.extras
 import queries
+import gzip
 from lxml import etree
 from datetime import datetime
 from datetime import timedelta
@@ -49,9 +50,18 @@ class ChangesetMD():
                     values (%s,%s,%s,%s,%s)''',
                     (id, comment['uid'], comment['user'], comment['date'], comment['text']))
 
-    def parseFile(self, connection, changesetFile):
+    def deleteExisting(self, connection, id):
+        cursor = connection.cursor()
+        cursor.execute('''DELETE FROM osm_changeset_comment
+                          WHERE comment_changeset_id = %s''', (id,))
+        cursor.execute('''DELETE FROM osm_changeset
+                          WHERE id = %s''', (id,))
+
+    def parseFile(self, connection, changesetFile, doReplication):
         parsedCount = 0
         startTime = datetime.now()
+        cursor = connection.cursor()
+        cursor.execute('''SET synchronous_commit TO OFF''')
         context = etree.iterparse(changesetFile)
         action, root = context.next()
         for action, elem in context:
@@ -74,6 +84,10 @@ class ChangesetMD():
                     for text in commentElement.iterchildren(tag='text'):
                         comment['text'] = text.text
                     comments.append(comment)
+
+            if(doReplication):
+                print 'deleting potentially existing changeset: ', elem.attrib['id']
+                self.deleteExisting(connection, elem.attrib['id'])
 
             self.insertNew(connection, elem.attrib['id'], elem.attrib.get('uid', None),
                            elem.attrib['created_at'], elem.attrib.get('min_lat', None),
@@ -109,6 +123,7 @@ if __name__ == '__main__':
     argParser.add_argument('-p', '--password', action='store', dest='dbPass', default=None, help='Database password')
     argParser.add_argument('-d', '--database', action='store', dest='dbName', help='Target database', required=True)
     argParser.add_argument('-f', '--file', action='store', dest='fileName', help='OSM changeset file to parse')
+    argParser.add_argument('-r', '--replicate', action='store_true', dest='doReplication', default=False, help='Apply a replication file to an existing database')
     
     args = argParser.parse_args()
 
@@ -128,20 +143,30 @@ if __name__ == '__main__':
 
         print 'parsing changeset file'
         changesetFile = None
-        if(args.fileName[-4:] == '.bz2'):
-            if(bz2Support):
-                md.parseFile(conn, BZ2File(args.fileName))
-            else:
-                print 'ERROR: bzip2 support not available. Unzip file first or install bz2file'
-                sys.exit(1)
+        if(args.doReplication):
+            changesetFile = gzip.open(args.fileName, 'rb')
         else:
-            md.parseFile(conn, open(args.fileName, 'r'))
+            if(args.fileName[-4:] == '.bz2'):
+                if(bz2Support):
+                    changesetFile = BZ2File(args.fileName)
+                else:
+                    print 'ERROR: bzip2 support not available. Unzip file first or install bz2file'
+                    sys.exit(1)
+            else:
+                changesetFile = open(args.fileName, 'rb')
 
-        cursor = conn.cursor()
-        print 'creating constraints'
-        cursor.execute(queries.createConstraints)
-        print 'creating indexes'
-        cursor.execute(queries.createIndexes)
+        if(changesetFile != None):
+            md.parseFile(conn, changesetFile, args.doReplication)
+        else:
+            print 'ERROR: no changeset file opened. Something went wrong in processing args'
+            sys.exist(1)
+
+        if(not args.doReplication):
+            cursor = conn.cursor()
+            print 'creating constraints'
+            cursor.execute(queries.createConstraints)
+            print 'creating indexes'
+            cursor.execute(queries.createIndexes)
 
         conn.close()
 
