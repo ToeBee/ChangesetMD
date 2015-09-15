@@ -13,15 +13,19 @@ import psycopg2
 import psycopg2.extras
 import queries
 import gzip
+import urllib2
 from lxml import etree
 from datetime import datetime
 from datetime import timedelta
+from StringIO import StringIO
 
 try:
     from bz2file import BZ2File
     bz2Support = True
 except ImportError:
     bz2Support = False
+
+BASE_REPL_URL = "http://planet.osm.org/replication/changesets/"
 
 class ChangesetMD():
     def truncateTables(self, connection):
@@ -108,6 +112,18 @@ class ChangesetMD():
         print "parsing complete"
         print "parsed {:,}".format(parsedCount)
 
+
+    def fetchReplicationFile(self, connection, sequenceNumber):
+        topdir = format(sequenceNumber / 1000000, '003')
+        if(sequenceNumber >= 1000000):
+            sequenceNumber = sequenceNumber - 1000000
+        subdir = format(sequenceNumber / 1000, '003')
+        fileNumber = format(sequenceNumber % 1000, '003')
+        fileUrl = BASE_REPL_URL + topdir + '/' + subdir + '/' + fileNumber + '.osm.gz'
+        print "opening replication file at " + fileUrl
+        replicationFile = urllib2.urlopen(fileUrl)
+        replicationData = StringIO(replicationFile.read())
+        return gzip.GzipFile(fileobj=replicationData)
 
 if __name__ == '__main__':
     beginTime = datetime.now()
