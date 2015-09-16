@@ -14,6 +14,7 @@ import psycopg2.extras
 import queries
 import gzip
 import urllib2
+import yaml
 from lxml import etree
 from datetime import datetime
 from datetime import timedelta
@@ -40,6 +41,7 @@ class ChangesetMD():
         print 'creating tables'
         cursor = connection.cursor()
         cursor.execute(queries.createChangesetTable)
+        cursor.execute(queries.initStateTable)
         connection.commit()
 
     def insertNew(self, connection, id, userId, createdAt, minLat, maxLat, minLon, maxLon, closedAt, open, numChanges, userName, tags, comments):
@@ -65,7 +67,6 @@ class ChangesetMD():
         parsedCount = 0
         startTime = datetime.now()
         cursor = connection.cursor()
-        cursor.execute('''SET synchronous_commit TO OFF''')
         context = etree.iterparse(changesetFile)
         action, root = context.next()
         for action, elem in context:
@@ -90,7 +91,6 @@ class ChangesetMD():
                     comments.append(comment)
 
             if(doReplication):
-                print 'deleting potentially existing changeset: ', elem.attrib['id']
                 self.deleteExisting(connection, elem.attrib['id'])
 
             self.insertNew(connection, elem.attrib['id'], elem.attrib.get('uid', None),
@@ -113,7 +113,7 @@ class ChangesetMD():
         print "parsed {:,}".format(parsedCount)
 
 
-    def fetchReplicationFile(self, connection, sequenceNumber):
+    def fetchReplicationFile(self, sequenceNumber):
         topdir = format(sequenceNumber / 1000000, '003')
         if(sequenceNumber >= 1000000):
             sequenceNumber = sequenceNumber - 1000000
@@ -124,6 +124,37 @@ class ChangesetMD():
         replicationFile = urllib2.urlopen(fileUrl)
         replicationData = StringIO(replicationFile.read())
         return gzip.GzipFile(fileobj=replicationData)
+
+    def doReplication(self, connection):
+        cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        cursor.execute('LOCK TABLE osm_changeset_state IN ACCESS EXCLUSIVE MODE NOWAIT')
+        cursor.execute('select * from osm_changeset_state')
+        dbStatus = cursor.fetchone()
+        lastDbSequence = dbStatus['last_sequence']
+        if(dbStatus['update_in_progress'] == 1):
+            print "concurrent update in progress. Bailing out!"
+            return
+        if(lastDbSequence == -1):
+            print "replication state not initialized. You must set the sequence number first."
+            return
+        cursor.execute('update osm_changeset_state set update_in_progress = 1')
+        connection.commit()
+        print("latest sequence from the database: " + str(lastDbSequence))
+        serverState = yaml.load(urllib2.urlopen(BASE_REPL_URL + "state.yaml"))
+        lastServerSequence = serverState['sequence']
+        print("latest sequence on OSM server: " + str(lastServerSequence))
+        if(lastServerSequence > lastDbSequence):
+            print("server has new sequence. commencing replication")
+            currentSequence = lastDbSequence + 1
+            while(currentSequence <= lastServerSequence):
+                self.parseFile(connection, self.fetchReplicationFile(currentSequence), True)
+                cursor.execute('update osm_changeset_state set last_sequence = %s', (currentSequence,))
+                connection.commit()
+                currentSequence += 1
+        print("finished with replication. Clearing status record")
+        cursor.execute('update osm_changeset_state set update_in_progress = 0, last_timestamp = %s', (serverState['last_run'],))
+        connection.commit()
+
 
 if __name__ == '__main__':
     beginTime = datetime.now()
@@ -154,6 +185,10 @@ if __name__ == '__main__':
         md.createTables(conn)
 
     psycopg2.extras.register_hstore(conn)
+
+    if(args.doReplication):
+        md.doReplication(conn)
+        sys.exit(0)
 
     if not (args.fileName is None):
 
