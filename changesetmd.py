@@ -35,6 +35,7 @@ class ChangesetMD():
         cursor.execute("TRUNCATE TABLE osm_changeset_comment CASCADE;")
         cursor.execute("TRUNCATE TABLE osm_changeset CASCADE;")
         cursor.execute(queries.dropIndexes)
+        cursor.execute("UPDATE osm_changeset_state set last_sequence = -1, last_timestamp = null, update_in_progress = 0")
         connection.commit()
 
     def createTables(self, connection):
