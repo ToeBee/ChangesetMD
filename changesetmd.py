@@ -128,7 +128,11 @@ class ChangesetMD():
 
     def doReplication(self, connection):
         cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
-        cursor.execute('LOCK TABLE osm_changeset_state IN ACCESS EXCLUSIVE MODE NOWAIT')
+        try:
+            cursor.execute('LOCK TABLE osm_changeset_state IN ACCESS EXCLUSIVE MODE NOWAIT')
+        except psycopg2.OperationalError as e:
+            print "error getting lock on state table. Another process might be running"
+            return
         cursor.execute('select * from osm_changeset_state')
         dbStatus = cursor.fetchone()
         lastDbSequence = dbStatus['last_sequence']
