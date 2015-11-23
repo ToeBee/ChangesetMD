@@ -132,34 +132,59 @@ class ChangesetMD():
             cursor.execute('LOCK TABLE osm_changeset_state IN ACCESS EXCLUSIVE MODE NOWAIT')
         except psycopg2.OperationalError as e:
             print "error getting lock on state table. Another process might be running"
-            return
+            return 1
         cursor.execute('select * from osm_changeset_state')
         dbStatus = cursor.fetchone()
         lastDbSequence = dbStatus['last_sequence']
+        timestamp = None
+        lastServerTimestamp = None
+        newTimestamp = None
+        if(dbStatus['last_timestamp'] is not None):
+            timestamp = dbStatus['last_timestamp']
+        print "latest timestamp in database: " + str(timestamp)
         if(dbStatus['update_in_progress'] == 1):
             print "concurrent update in progress. Bailing out!"
-            return
+            return 1
         if(lastDbSequence == -1):
             print "replication state not initialized. You must set the sequence number first."
-            return
+            return 1
         cursor.execute('update osm_changeset_state set update_in_progress = 1')
         connection.commit()
         print("latest sequence from the database: " + str(lastDbSequence))
-        serverState = yaml.load(urllib2.urlopen(BASE_REPL_URL + "state.yaml"))
-        lastServerSequence = serverState['sequence']
-        print("latest sequence on OSM server: " + str(lastServerSequence))
-        if(lastServerSequence > lastDbSequence):
-            print("server has new sequence. commencing replication")
-            currentSequence = lastDbSequence + 1
-            while(currentSequence <= lastServerSequence):
-                self.parseFile(connection, self.fetchReplicationFile(currentSequence), True)
-                cursor.execute('update osm_changeset_state set last_sequence = %s', (currentSequence,))
-                connection.commit()
-                currentSequence += 1
-        print("finished with replication. Clearing status record")
-        cursor.execute('update osm_changeset_state set update_in_progress = 0, last_timestamp = %s', (serverState['last_run'],))
-        connection.commit()
 
+        #No matter what happens after this point, execution needs to reach the update statement
+        #at the end of this method to unlock the database or an error will forever leave it locked
+        returnStatus = 0
+        try:
+            serverState = yaml.load(urllib2.urlopen(BASE_REPL_URL + "state.yaml"))
+            lastServerSequence = serverState['sequence']
+            print "got sequence"
+            lastServerTimestamp = serverState['last_run']
+            print "last timestamp on server: " + str(lastServerTimestamp)
+        except Exception as e:
+            print "error retrieving server state file. Bailing on replication"
+            print e
+            returnStatus = 2
+        else:
+            try:
+                print("latest sequence on OSM server: " + str(lastServerSequence))
+                if(lastServerSequence > lastDbSequence):
+                    print("server has new sequence. commencing replication")
+                    currentSequence = lastDbSequence + 1
+                    while(currentSequence <= lastServerSequence):
+                        self.parseFile(connection, self.fetchReplicationFile(currentSequence), True)
+                        cursor.execute('update osm_changeset_state set last_sequence = %s', (currentSequence,))
+                        connection.commit()
+                        currentSequence += 1
+                    timestamp = lastServerTimestamp
+                print("finished with replication. Clearing status record")
+            except Exception as e:
+                print "error during replication"
+                print e
+                returnStatus = 2
+        cursor.execute('update osm_changeset_state set update_in_progress = 0, last_timestamp = %s', (timestamp,))
+        connection.commit()
+        return returnStatus
 
 if __name__ == '__main__':
     beginTime = datetime.now()
@@ -192,11 +217,10 @@ if __name__ == '__main__':
     psycopg2.extras.register_hstore(conn)
 
     if(args.doReplication):
-        md.doReplication(conn)
-        sys.exit(0)
+        returnStatus = md.doReplication(conn)
+        sys.exit(returnStatus)
 
     if not (args.fileName is None):
-
         print 'parsing changeset file'
         changesetFile = None
         if(args.doReplication):
