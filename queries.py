@@ -25,7 +25,14 @@ CREATE TABLE osm_changeset_comment (
   comment_date timestamp without time zone not null,
   comment_text text not null
 );
+CREATE TABLE osm_changeset_state (
+  last_sequence bigint,
+  last_timestamp timestamp without time zone,
+  update_in_progress smallint
+);
 '''
+
+initStateTable = '''INSERT INTO osm_changeset_state VALUES (-1, null, 0)''';
 
 dropIndexes = '''ALTER TABLE osm_changeset DROP CONSTRAINT IF EXISTS osm_changeset_pkey CASCADE;
 DROP INDEX IF EXISTS user_name_idx, user_id_idx, created_idx, tags_idx;
@@ -38,8 +45,3 @@ CREATE INDEX user_id_idx ON osm_changeset(user_id);
 CREATE INDEX created_idx ON osm_changeset(created_at);
 CREATE INDEX tags_idx ON osm_changeset USING GIN(tags);
 '''
-
-deleteOpenChangesets = '''DELETE FROM osm_changeset
-WHERE id >= (SELECT min(id) FROM osm_changeset WHERE open = 'true');'''
-
-findNewestChangeset = '''select max(id) from osm_changeset;'''

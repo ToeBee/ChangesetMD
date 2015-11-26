@@ -12,15 +12,21 @@ import argparse
 import psycopg2
 import psycopg2.extras
 import queries
+import gzip
+import urllib2
+import yaml
 from lxml import etree
 from datetime import datetime
 from datetime import timedelta
+from StringIO import StringIO
 
 try:
     from bz2file import BZ2File
     bz2Support = True
 except ImportError:
     bz2Support = False
+
+BASE_REPL_URL = "http://planet.osm.org/replication/changesets/"
 
 class ChangesetMD():
     def truncateTables(self, connection):
@@ -29,27 +35,15 @@ class ChangesetMD():
         cursor.execute("TRUNCATE TABLE osm_changeset_comment CASCADE;")
         cursor.execute("TRUNCATE TABLE osm_changeset CASCADE;")
         cursor.execute(queries.dropIndexes)
+        cursor.execute("UPDATE osm_changeset_state set last_sequence = -1, last_timestamp = null, update_in_progress = 0")
         connection.commit()
 
     def createTables(self, connection):
         print 'creating tables'
         cursor = connection.cursor()
         cursor.execute(queries.createChangesetTable)
+        cursor.execute(queries.initStateTable)
         connection.commit()
-
-    def doIncremental(self, connection):
-        """Prepare the table for incremental update and return the last changeset ID
-
-        For incremental updates we delete all changesets that are newer than the oldest one
-        marked as being open in the last dump. Then we skip all older changesets while parsing
-        the new file to speed things up. This way we catch any changes that may have been made
-        to open changesets after the last dump was made.
-        """
-        print 'preparing for incremental update'
-        cursor = connection.cursor()
-        cursor.execute(queries.deleteOpenChangesets)
-        cursor.execute(queries.findNewestChangeset)
-        return cursor.fetchone()[0]
 
     def insertNew(self, connection, id, userId, createdAt, minLat, maxLat, minLon, maxLon, closedAt, open, numChanges, userName, tags, comments):
         cursor = connection.cursor()
@@ -63,11 +57,17 @@ class ChangesetMD():
                     values (%s,%s,%s,%s,%s)''',
                     (id, comment['uid'], comment['user'], comment['date'], comment['text']))
 
-    def parseFile(self, connection, newestChangeset, changesetFile):
+    def deleteExisting(self, connection, id):
+        cursor = connection.cursor()
+        cursor.execute('''DELETE FROM osm_changeset_comment
+                          WHERE comment_changeset_id = %s''', (id,))
+        cursor.execute('''DELETE FROM osm_changeset
+                          WHERE id = %s''', (id,))
+
+    def parseFile(self, connection, changesetFile, doReplication):
         parsedCount = 0
-        skippedCount = 0
-        insertedCount = 0
         startTime = datetime.now()
+        cursor = connection.cursor()
         context = etree.iterparse(changesetFile)
         action, root = context.next()
         for action, elem in context:
@@ -75,34 +75,34 @@ class ChangesetMD():
                 continue
 
             parsedCount += 1
-            if newestChangeset != -1 and long(elem.attrib['id']) <= newestChangeset:
-                    skippedCount += 1
-            else:
-                tags = {}
-                for tag in elem.iterchildren(tag='tag'):
-                    tags[tag.attrib['k']] = tag.attrib['v']
 
-                comments = []
-                for discussion in elem.iterchildren(tag='discussion'):
-                    for commentElement in discussion.iterchildren(tag='comment'):
-                        comment = dict()
-                        comment['uid'] = commentElement.attrib.get('uid')
-                        comment['user'] = commentElement.attrib.get('user')
-                        comment['date'] = commentElement.attrib.get('date')
-                        for text in commentElement.iterchildren(tag='text'):
-                            comment['text'] = text.text
-                        comments.append(comment)
+            tags = {}
+            for tag in elem.iterchildren(tag='tag'):
+                tags[tag.attrib['k']] = tag.attrib['v']
 
-                self.insertNew(connection, elem.attrib['id'], elem.attrib.get('uid', None),
-                               elem.attrib['created_at'], elem.attrib.get('min_lat', None),
-                               elem.attrib.get('max_lat', None), elem.attrib.get('min_lon', None),
-                               elem.attrib.get('max_lon', None),elem.attrib.get('closed_at', None),
-                               elem.attrib.get('open', None), elem.attrib.get('num_changes', None),
-                               elem.attrib.get('user', None), tags, comments)
-                insertedCount += 1
+            comments = []
+            for discussion in elem.iterchildren(tag='discussion'):
+                for commentElement in discussion.iterchildren(tag='comment'):
+                    comment = dict()
+                    comment['uid'] = commentElement.attrib.get('uid')
+                    comment['user'] = commentElement.attrib.get('user')
+                    comment['date'] = commentElement.attrib.get('date')
+                    for text in commentElement.iterchildren(tag='text'):
+                        comment['text'] = text.text
+                    comments.append(comment)
+
+            if(doReplication):
+                self.deleteExisting(connection, elem.attrib['id'])
+
+            self.insertNew(connection, elem.attrib['id'], elem.attrib.get('uid', None),
+                           elem.attrib['created_at'], elem.attrib.get('min_lat', None),
+                           elem.attrib.get('max_lat', None), elem.attrib.get('min_lon', None),
+                           elem.attrib.get('max_lon', None),elem.attrib.get('closed_at', None),
+                           elem.attrib.get('open', None), elem.attrib.get('num_changes', None),
+                           elem.attrib.get('user', None), tags, comments)
 
             if((parsedCount % 10000) == 0):
-                print "parsed %s skipped %s inserted %s" % ('{:,}'.format(parsedCount), '{:,}'.format(skippedCount), '{:,}'.format(insertedCount))
+                print "parsed %s" % ('{:,}'.format(parsedCount))
                 print "cumulative rate: %s/sec" % '{:,.0f}'.format(parsedCount/timedelta.total_seconds(datetime.now() - startTime))
             
             #clear everything we don't need from memory to avoid leaking
@@ -112,9 +112,79 @@ class ChangesetMD():
         connection.commit()
         print "parsing complete"
         print "parsed {:,}".format(parsedCount)
-        print "skipped {:,}".format(skippedCount)
-        print "inserted {:,}".format(insertedCount)
 
+
+    def fetchReplicationFile(self, sequenceNumber):
+        topdir = format(sequenceNumber / 1000000, '003')
+        if(sequenceNumber >= 1000000):
+            sequenceNumber = sequenceNumber - 1000000
+        subdir = format(sequenceNumber / 1000, '003')
+        fileNumber = format(sequenceNumber % 1000, '003')
+        fileUrl = BASE_REPL_URL + topdir + '/' + subdir + '/' + fileNumber + '.osm.gz'
+        print "opening replication file at " + fileUrl
+        replicationFile = urllib2.urlopen(fileUrl)
+        replicationData = StringIO(replicationFile.read())
+        return gzip.GzipFile(fileobj=replicationData)
+
+    def doReplication(self, connection):
+        cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        try:
+            cursor.execute('LOCK TABLE osm_changeset_state IN ACCESS EXCLUSIVE MODE NOWAIT')
+        except psycopg2.OperationalError as e:
+            print "error getting lock on state table. Another process might be running"
+            return 1
+        cursor.execute('select * from osm_changeset_state')
+        dbStatus = cursor.fetchone()
+        lastDbSequence = dbStatus['last_sequence']
+        timestamp = None
+        lastServerTimestamp = None
+        newTimestamp = None
+        if(dbStatus['last_timestamp'] is not None):
+            timestamp = dbStatus['last_timestamp']
+        print "latest timestamp in database: " + str(timestamp)
+        if(dbStatus['update_in_progress'] == 1):
+            print "concurrent update in progress. Bailing out!"
+            return 1
+        if(lastDbSequence == -1):
+            print "replication state not initialized. You must set the sequence number first."
+            return 1
+        cursor.execute('update osm_changeset_state set update_in_progress = 1')
+        connection.commit()
+        print("latest sequence from the database: " + str(lastDbSequence))
+
+        #No matter what happens after this point, execution needs to reach the update statement
+        #at the end of this method to unlock the database or an error will forever leave it locked
+        returnStatus = 0
+        try:
+            serverState = yaml.load(urllib2.urlopen(BASE_REPL_URL + "state.yaml"))
+            lastServerSequence = serverState['sequence']
+            print "got sequence"
+            lastServerTimestamp = serverState['last_run']
+            print "last timestamp on server: " + str(lastServerTimestamp)
+        except Exception as e:
+            print "error retrieving server state file. Bailing on replication"
+            print e
+            returnStatus = 2
+        else:
+            try:
+                print("latest sequence on OSM server: " + str(lastServerSequence))
+                if(lastServerSequence > lastDbSequence):
+                    print("server has new sequence. commencing replication")
+                    currentSequence = lastDbSequence + 1
+                    while(currentSequence <= lastServerSequence):
+                        self.parseFile(connection, self.fetchReplicationFile(currentSequence), True)
+                        cursor.execute('update osm_changeset_state set last_sequence = %s', (currentSequence,))
+                        connection.commit()
+                        currentSequence += 1
+                    timestamp = lastServerTimestamp
+                print("finished with replication. Clearing status record")
+            except Exception as e:
+                print "error during replication"
+                print e
+                returnStatus = 2
+        cursor.execute('update osm_changeset_state set update_in_progress = 0, last_timestamp = %s', (timestamp,))
+        connection.commit()
+        return returnStatus
 
 if __name__ == '__main__':
     beginTime = datetime.now()
@@ -130,7 +200,7 @@ if __name__ == '__main__':
     argParser.add_argument('-p', '--password', action='store', dest='dbPass', default=None, help='Database password')
     argParser.add_argument('-d', '--database', action='store', dest='dbName', help='Target database', required=True)
     argParser.add_argument('-f', '--file', action='store', dest='fileName', help='OSM changeset file to parse')
-    argParser.add_argument('-i', '--incremental', action='store_true', default=False, dest='incrementalUpdate', help='Perform incremental update. Only import new changesets')
+    argParser.add_argument('-r', '--replicate', action='store_true', dest='doReplication', default=False, help='Apply a replication file to an existing database')
     
     args = argParser.parse_args()
 
@@ -144,27 +214,34 @@ if __name__ == '__main__':
     if args.createTables:
         md.createTables(conn)
 
-    newestChangeset = -1
-    if args.incrementalUpdate:
-        newestChangeset = md.doIncremental(conn)
-        print "Performing incremental update from changeset {:,}".format(newestChangeset)
-
     psycopg2.extras.register_hstore(conn)
 
-    if not (args.fileName is None):
+    if(args.doReplication):
+        returnStatus = md.doReplication(conn)
+        sys.exit(returnStatus)
 
+    if not (args.fileName is None):
         print 'parsing changeset file'
         changesetFile = None
-        if(args.fileName[-4:] == '.bz2'):
-            if(bz2Support):
-                md.parseFile(conn, newestChangeset, BZ2File(args.fileName))
-            else:
-                print 'ERROR: bzip2 support not available. Unzip file first or install bz2file'
-                sys.exit(1)
+        if(args.doReplication):
+            changesetFile = gzip.open(args.fileName, 'rb')
         else:
-            md.parseFile(conn, newestChangeset, open(args.fileName, 'r'))
+            if(args.fileName[-4:] == '.bz2'):
+                if(bz2Support):
+                    changesetFile = BZ2File(args.fileName)
+                else:
+                    print 'ERROR: bzip2 support not available. Unzip file first or install bz2file'
+                    sys.exit(1)
+            else:
+                changesetFile = open(args.fileName, 'rb')
 
-        if not args.incrementalUpdate:
+        if(changesetFile != None):
+            md.parseFile(conn, changesetFile, args.doReplication)
+        else:
+            print 'ERROR: no changeset file opened. Something went wrong in processing args'
+            sys.exist(1)
+
+        if(not args.doReplication):
             cursor = conn.cursor()
             print 'creating constraints'
             cursor.execute(queries.createConstraints)
