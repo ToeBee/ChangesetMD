@@ -15,6 +15,8 @@ On Debian-based systems this means installing the python-psycopg2 and python-lxm
 
 If you want to parse the changeset file without first unzipping it, you will also need to install the [bz2file library](http://pypi.python.org/pypi/bz2file) since the built in bz2 library can not handle multi-stream bzip files.
 
+For building geometries, ```postgis``` extension needs to be [installed](http://postgis.net/install).
+
 ChangesetMD expects a postgres database to be set up for it. It can likely co-exist within another database if desired. Otherwise, As the postgres user execute:
 
     createdb changesets
@@ -37,6 +39,8 @@ To parse a dump file, use the -f | --file option.
     python changesetmd.py -d <database> -f /tmp/changeset-latest.osm
 
 If no other arguments are given, it will access postgres using the default settings of the postgres client, typically connecting on the unix socket as the current OS user. Use the ```--help``` argument to see optional arguments for connecting to postgres.
+
+You can add the ```-g``` | ```--geometry``` option to build polygon geometries (the database also needs to be created with this option).
 
 Replication
 ------------
@@ -70,6 +74,7 @@ Notes
 - Takes 1-2 hours to import the current dump on a decent home computer.
 - Might be faster to process the XML into a flat file and then use the postgres COPY command to do a bulk load but this would make incremental updates a little harder
 - I have commonly queried fields indexed. Depending on what you want to do, you may need more indexes.
+- Changesets can be huge in extent, so you may wish to filter them by area before any visualization. 225 square km seems to be a fairly decent threshold to get the actual spatial footprint of edits. `WHERE ST_Area(ST_Transform(geom, 3857)) < 225000000` will do the trick.
 
 
 Table Structure
@@ -85,11 +90,12 @@ Primary table of all changesets with the following columns:
 - `user_name`: OSM username
 - `user_id`: numeric OSM user ID
 - `tags`: an hstore column holding all the tags of the changeset
+- `geom`: [optional] a postgis geometry column of `Polygon` type (SRID: 4326)
 
 Note that all fields except for id and created\_at can be null.
 
-osm\_changeset\_comment:  
-All comments made on changesets via the new commenting system  
+osm\_changeset\_comment:
+All comments made on changesets via the new commenting system
 - `comment_changeset_id`: Foreign key to the changeset ID
 - `comment_user_id`: numeric OSM user ID
 - `comment_user_name`: OSM username
