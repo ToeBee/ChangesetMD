@@ -55,7 +55,7 @@ class ChangesetMD():
         if self.createGeometry:
             cursor.execute('''INSERT into osm_changeset
                     (id, user_id, created_at, min_lat, max_lat, min_lon, max_lon, closed_at, open, num_changes, user_name, tags, geom)
-                    values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,ST_SetSRID(ST_MakeEnvelope(%s,%s,%s,%s))''',
+                    values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,ST_SetSRID(ST_MakeEnvelope(%s,%s,%s,%s), 4326))''',
                     (id, userId, createdAt, minLat, maxLat, minLon, maxLon, closedAt, open, numChanges, userName, tags, minLon, minLat, maxLon, maxLat))
         else:
             cursor.execute('''INSERT into osm_changeset
@@ -232,7 +232,10 @@ if __name__ == '__main__':
         sys.exit(returnStatus)
 
     if not (args.fileName is None):
-        print 'parsing changeset file'
+        if args.createGeometry:
+            print 'parsing changeset file with geometries'
+        else:
+            print 'parsing changeset file'
         changesetFile = None
         if(args.doReplication):
             changesetFile = gzip.open(args.fileName, 'rb')
@@ -258,6 +261,8 @@ if __name__ == '__main__':
             cursor.execute(queries.createConstraints)
             print 'creating indexes'
             cursor.execute(queries.createIndexes)
+            if args.createGeometry:
+                cursor.execute(queries.createGeomIndex)
 
         conn.close()
 
