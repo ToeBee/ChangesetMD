@@ -35,7 +35,7 @@ CREATE TABLE osm_changeset_state (
 initStateTable = '''INSERT INTO osm_changeset_state VALUES (-1, null, 0)''';
 
 dropIndexes = '''ALTER TABLE osm_changeset DROP CONSTRAINT IF EXISTS osm_changeset_pkey CASCADE;
-DROP INDEX IF EXISTS user_name_idx, user_id_idx, created_idx, tags_idx;
+DROP INDEX IF EXISTS user_name_idx, user_id_idx, created_idx, tags_idx, changeset_geom_gist ;
 '''
 
 createConstraints = '''ALTER TABLE osm_changeset ADD CONSTRAINT osm_changeset_pkey PRIMARY KEY(id);'''
