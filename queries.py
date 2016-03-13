@@ -45,3 +45,12 @@ CREATE INDEX user_id_idx ON osm_changeset(user_id);
 CREATE INDEX created_idx ON osm_changeset(created_at);
 CREATE INDEX tags_idx ON osm_changeset USING GIN(tags);
 '''
+
+createGeometryColumn = '''
+CREATE EXTENSION IF NOT EXISTS postgis;
+SELECT AddGeometryColumn('osm_changeset','geom', 4326, 'POLYGON', 2);
+'''
+
+createGeomIndex = '''
+CREATE INDEX changeset_geom_gist ON osm_changeset USING GIST(geom);
+'''

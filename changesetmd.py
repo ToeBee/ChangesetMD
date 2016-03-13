@@ -29,6 +29,9 @@ except ImportError:
 BASE_REPL_URL = "http://planet.osm.org/replication/changesets/"
 
 class ChangesetMD():
+    def __init__(self, createGeometry):
+        self.createGeometry = createGeometry
+
     def truncateTables(self, connection):
         print 'truncating tables'
         cursor = connection.cursor()
@@ -43,11 +46,19 @@ class ChangesetMD():
         cursor = connection.cursor()
         cursor.execute(queries.createChangesetTable)
         cursor.execute(queries.initStateTable)
+        if self.createGeometry:
+            cursor.execute(queries.createGeometryColumn)
         connection.commit()
 
     def insertNew(self, connection, id, userId, createdAt, minLat, maxLat, minLon, maxLon, closedAt, open, numChanges, userName, tags, comments):
         cursor = connection.cursor()
-        cursor.execute('''INSERT into osm_changeset
+        if self.createGeometry:
+            cursor.execute('''INSERT into osm_changeset
+                    (id, user_id, created_at, min_lat, max_lat, min_lon, max_lon, closed_at, open, num_changes, user_name, tags, geom)
+                    values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,ST_SetSRID(ST_MakeEnvelope(%s,%s,%s,%s))''',
+                    (id, userId, createdAt, minLat, maxLat, minLon, maxLon, closedAt, open, numChanges, userName, tags, minLon, minLat, maxLon, maxLat))
+        else:
+            cursor.execute('''INSERT into osm_changeset
                     (id, user_id, created_at, min_lat, max_lat, min_lon, max_lon, closed_at, open, num_changes, user_name, tags)
                     values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
                     (id, userId, createdAt, minLat, maxLat, minLon, maxLon, closedAt, open, numChanges, userName, tags))
@@ -104,7 +115,7 @@ class ChangesetMD():
             if((parsedCount % 10000) == 0):
                 print "parsed %s" % ('{:,}'.format(parsedCount))
                 print "cumulative rate: %s/sec" % '{:,.0f}'.format(parsedCount/timedelta.total_seconds(datetime.now() - startTime))
-            
+
             #clear everything we don't need from memory to avoid leaking
             elem.clear()
             while elem.getprevious() is not None:
@@ -112,7 +123,6 @@ class ChangesetMD():
         connection.commit()
         print "parsing complete"
         print "parsed {:,}".format(parsedCount)
-
 
     def fetchReplicationFile(self, sequenceNumber):
         topdir = format(sequenceNumber / 1000000, '003')
@@ -201,13 +211,14 @@ if __name__ == '__main__':
     argParser.add_argument('-d', '--database', action='store', dest='dbName', help='Target database', required=True)
     argParser.add_argument('-f', '--file', action='store', dest='fileName', help='OSM changeset file to parse')
     argParser.add_argument('-r', '--replicate', action='store_true', dest='doReplication', default=False, help='Apply a replication file to an existing database')
-    
+    argParser.add_argument('-g', '--geometry', action='store_true', dest='createGeometry', default=False, help='Build geometry of changesets (requires postgis)')
+
     args = argParser.parse_args()
 
     conn = psycopg2.connect(database=args.dbName, user=args.dbUser, password=args.dbPass, host=args.dbHost, port=args.dbPort)
 
 
-    md = ChangesetMD()
+    md = ChangesetMD(args.createGeometry)
     if args.truncateTables:
         md.truncateTables(conn)
 
