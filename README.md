@@ -103,8 +103,8 @@ All comments made on changesets via the new commenting system
 
 If you are unfamiliar with hstore and how to query it, see the [postgres documentation](http://www.postgresql.org/docs/9.2/static/hstore.html)
 
-Example queries: 
-
+Example queries
+------------
 Count how many changesets have a comment tag:
 
     SELECT COUNT(*)
@@ -116,7 +116,12 @@ Find all changesets that were created by JOSM:
     SELECT COUNT(*)
     FROM osm_changeset
     WHERE tags -> 'created_by' LIKE 'JOSM%';
-   
+
+Find all changesets that were created in Liberty Island.
+
+    SELECT count(id)
+    FROM osm_changeset c, (SELECT ST_Envelope(-74.0474545,40.6884971,-74.0433990,40.6911817) as geom) s
+    WHERE ST_CoveredBy(c.geom, s.geom);
 
 License
 ------------
