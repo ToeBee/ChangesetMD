@@ -263,6 +263,7 @@ if __name__ == '__main__':
             cursor.execute(queries.createIndexes)
             if args.createGeometry:
                 cursor.execute(queries.createGeomIndex)
+            conn.commit()
 
         conn.close()
 
