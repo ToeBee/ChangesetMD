@@ -126,9 +126,7 @@ class ChangesetMD():
 
     def fetchReplicationFile(self, sequenceNumber):
         topdir = format(sequenceNumber / 1000000, '003')
-        if(sequenceNumber >= 1000000):
-            sequenceNumber = sequenceNumber - 1000000
-        subdir = format(sequenceNumber / 1000, '003')
+        subdir = format((sequenceNumber / 1000) % 1000, '003')
         fileNumber = format(sequenceNumber % 1000, '003')
         fileUrl = BASE_REPL_URL + topdir + '/' + subdir + '/' + fileNumber + '.osm.gz'
         print "opening replication file at " + fileUrl
