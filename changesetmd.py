@@ -26,7 +26,7 @@ try:
 except ImportError:
     bz2Support = False
 
-BASE_REPL_URL = "http://planet.osm.org/replication/changesets/"
+BASE_REPL_URL = "http://planet.openstreetmap.org/replication/changesets/"
 
 class ChangesetMD():
     def __init__(self, createGeometry):
