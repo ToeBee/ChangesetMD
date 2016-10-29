@@ -6,6 +6,7 @@ from OpenStreetmap into a postgres database for querying.
 @author: Toby Murray
 '''
 
+from __future__ import print_function
 import os
 import sys
 import argparse
