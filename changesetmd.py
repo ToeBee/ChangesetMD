@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 '''
 ChangesetMD is a simple XML parser to read the weekly changeset metadata dumps
 from OpenStreetmap into a postgres database for querying.
@@ -79,7 +79,10 @@ class ChangesetMD():
         startTime = datetime.now()
         cursor = connection.cursor()
         context = etree.iterparse(changesetFile)
-        action, root = context.next()
+        if sys.version_info[0] < 3:
+            action, root = context.next()
+        else:
+            action, root = next(context)
         for action, elem in context:
             if(elem.tag != 'changeset'):
                 continue
