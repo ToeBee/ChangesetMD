@@ -8,10 +8,12 @@ It can also keep a database created with a weekly dump file up to date using min
 Setup
 ------------
 
-ChangesetMD works with python 2.7.
+ChangesetMD works with python 2.7 and Python 3.5.
 
 Aside from postgresql, ChangesetMD depends on the python libraries psycopg2 and lxml.
 On Debian-based systems this means installing the python-psycopg2 and python-lxml packages.
+
+If you are using `pip` and `virtualenv`, you can install all dependencies with `pip install -r requirements.txt`.
 
 If you want to parse the changeset file without first unzipping it, you will also need to install the [bz2file library](http://pypi.python.org/pypi/bz2file) since the built in bz2 library can not handle multi-stream bzip files.
 
