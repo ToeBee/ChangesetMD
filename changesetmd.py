@@ -13,12 +13,11 @@ import psycopg2
 import psycopg2.extras
 import queries
 import gzip
-import urllib2
+import requests
 import yaml
 from lxml import etree
 from datetime import datetime
 from datetime import timedelta
-from StringIO import StringIO
 
 try:
     from bz2file import BZ2File
@@ -130,8 +129,8 @@ class ChangesetMD():
         fileNumber = format(sequenceNumber % 1000, '003')
         fileUrl = BASE_REPL_URL + topdir + '/' + subdir + '/' + fileNumber + '.osm.gz'
         print("opening replication file at " + fileUrl)
-        replicationFile = urllib2.urlopen(fileUrl)
-        replicationData = StringIO(replicationFile.read())
+        replicationFile = requests.get(fileUrl)
+        replicationData = replicationFile.text
         return gzip.GzipFile(fileobj=replicationData)
 
     def doReplication(self, connection):
@@ -164,7 +163,7 @@ class ChangesetMD():
         #at the end of this method to unlock the database or an error will forever leave it locked
         returnStatus = 0
         try:
-            serverState = yaml.load(urllib2.urlopen(BASE_REPL_URL + "state.yaml"))
+            serverState = yaml.load(requests.get(BASE_REPL_URL + "state.yaml").text)
             lastServerSequence = serverState['sequence']
             print("got sequence")
             lastServerTimestamp = serverState['last_run']
