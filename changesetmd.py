@@ -33,7 +33,7 @@ class ChangesetMD():
         self.createGeometry = createGeometry
 
     def truncateTables(self, connection):
-        print 'truncating tables'
+        print('truncating tables')
         cursor = connection.cursor()
         cursor.execute("TRUNCATE TABLE osm_changeset_comment CASCADE;")
         cursor.execute("TRUNCATE TABLE osm_changeset CASCADE;")
@@ -42,7 +42,7 @@ class ChangesetMD():
         connection.commit()
 
     def createTables(self, connection):
-        print 'creating tables'
+        print('creating tables')
         cursor = connection.cursor()
         cursor.execute(queries.createChangesetTable)
         cursor.execute(queries.initStateTable)
@@ -113,23 +113,23 @@ class ChangesetMD():
                            elem.attrib.get('user', None), tags, comments)
 
             if((parsedCount % 10000) == 0):
-                print "parsed %s" % ('{:,}'.format(parsedCount))
-                print "cumulative rate: %s/sec" % '{:,.0f}'.format(parsedCount/timedelta.total_seconds(datetime.now() - startTime))
+                print("parsed %s" % ('{:,}'.format(parsedCount)))
+                print("cumulative rate: %s/sec" % '{:,.0f}'.format(parsedCount/timedelta.total_seconds(datetime.now() - startTime)))
 
             #clear everything we don't need from memory to avoid leaking
             elem.clear()
             while elem.getprevious() is not None:
                 del elem.getparent()[0]
         connection.commit()
-        print "parsing complete"
-        print "parsed {:,}".format(parsedCount)
+        print("parsing complete")
+        print("parsed {:,}".format(parsedCount))
 
     def fetchReplicationFile(self, sequenceNumber):
         topdir = format(sequenceNumber / 1000000, '003')
         subdir = format((sequenceNumber / 1000) % 1000, '003')
         fileNumber = format(sequenceNumber % 1000, '003')
         fileUrl = BASE_REPL_URL + topdir + '/' + subdir + '/' + fileNumber + '.osm.gz'
-        print "opening replication file at " + fileUrl
+        print("opening replication file at " + fileUrl)
         replicationFile = urllib2.urlopen(fileUrl)
         replicationData = StringIO(replicationFile.read())
         return gzip.GzipFile(fileobj=replicationData)
@@ -139,7 +139,7 @@ class ChangesetMD():
         try:
             cursor.execute('LOCK TABLE osm_changeset_state IN ACCESS EXCLUSIVE MODE NOWAIT')
         except psycopg2.OperationalError as e:
-            print "error getting lock on state table. Another process might be running"
+            print("error getting lock on state table. Another process might be running")
             return 1
         cursor.execute('select * from osm_changeset_state')
         dbStatus = cursor.fetchone()
@@ -149,12 +149,12 @@ class ChangesetMD():
         newTimestamp = None
         if(dbStatus['last_timestamp'] is not None):
             timestamp = dbStatus['last_timestamp']
-        print "latest timestamp in database: " + str(timestamp)
+        print("latest timestamp in database: " + str(timestamp))
         if(dbStatus['update_in_progress'] == 1):
-            print "concurrent update in progress. Bailing out!"
+            print("concurrent update in progress. Bailing out!")
             return 1
         if(lastDbSequence == -1):
-            print "replication state not initialized. You must set the sequence number first."
+            print("replication state not initialized. You must set the sequence number first.")
             return 1
         cursor.execute('update osm_changeset_state set update_in_progress = 1')
         connection.commit()
@@ -166,12 +166,12 @@ class ChangesetMD():
         try:
             serverState = yaml.load(urllib2.urlopen(BASE_REPL_URL + "state.yaml"))
             lastServerSequence = serverState['sequence']
-            print "got sequence"
+            print("got sequence")
             lastServerTimestamp = serverState['last_run']
-            print "last timestamp on server: " + str(lastServerTimestamp)
+            print("last timestamp on server: " + str(lastServerTimestamp))
         except Exception as e:
-            print "error retrieving server state file. Bailing on replication"
-            print e
+            print("error retrieving server state file. Bailing on replication")
+            print(e)
             returnStatus = 2
         else:
             try:
@@ -187,8 +187,8 @@ class ChangesetMD():
                     timestamp = lastServerTimestamp
                 print("finished with replication. Clearing status record")
             except Exception as e:
-                print "error during replication"
-                print e
+                print("error during replication")
+                print(e)
                 returnStatus = 2
         cursor.execute('update osm_changeset_state set update_in_progress = 0, last_timestamp = %s', (timestamp,))
         connection.commit()
@@ -231,9 +231,9 @@ if __name__ == '__main__':
 
     if not (args.fileName is None):
         if args.createGeometry:
-            print 'parsing changeset file with geometries'
+            print('parsing changeset file with geometries')
         else:
-            print 'parsing changeset file'
+            print('parsing changeset file')
         changesetFile = None
         if(args.doReplication):
             changesetFile = gzip.open(args.fileName, 'rb')
@@ -242,7 +242,7 @@ if __name__ == '__main__':
                 if(bz2Support):
                     changesetFile = BZ2File(args.fileName)
                 else:
-                    print 'ERROR: bzip2 support not available. Unzip file first or install bz2file'
+                    print('ERROR: bzip2 support not available. Unzip file first or install bz2file')
                     sys.exit(1)
             else:
                 changesetFile = open(args.fileName, 'rb')
@@ -250,14 +250,14 @@ if __name__ == '__main__':
         if(changesetFile != None):
             md.parseFile(conn, changesetFile, args.doReplication)
         else:
-            print 'ERROR: no changeset file opened. Something went wrong in processing args'
+            print('ERROR: no changeset file opened. Something went wrong in processing args')
             sys.exist(1)
 
         if(not args.doReplication):
             cursor = conn.cursor()
-            print 'creating constraints'
+            print('creating constraints')
             cursor.execute(queries.createConstraints)
-            print 'creating indexes'
+            print('creating indexes')
             cursor.execute(queries.createIndexes)
             if args.createGeometry:
                 cursor.execute(queries.createGeomIndex)
@@ -268,6 +268,6 @@ if __name__ == '__main__':
     endTime = datetime.now()
     timeCost = endTime - beginTime
 
-    print 'Processing time cost is ', timeCost
+    print('Processing time cost is ', timeCost)
 
-    print 'All done. Enjoy your (meta)data!'
+    print('All done. Enjoy your (meta)data!')
