@@ -120,7 +120,7 @@ Find all changesets that were created by JOSM:
 Find all changesets that were created in Liberty Island:
 
     SELECT count(id)
-    FROM osm_changeset c, (SELECT ST_SetSRID(ST_MakeEnvelope(-74.0474545,40.6884971,-74.0433990,40.6911817),4326) s
+    FROM osm_changeset c, (SELECT ST_SetSRID(ST_MakeEnvelope(-74.0474545,40.6884971,-74.0433990,40.6911817),4326) AS geom) s
     WHERE ST_CoveredBy(c.geom, s.geom);
 
 License
