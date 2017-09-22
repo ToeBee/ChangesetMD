@@ -73,7 +73,7 @@ Run this command as often as you wish to keep your database up to date with OSM.
 Notes
 ------------
 - Prints a status message every 10,000 records.
-- Takes 1-2 hours to import the current dump on a decent home computer.
+- Takes 2-3 hours to import the current dump on a decent home computer.
 - Might be faster to process the XML into a flat file and then use the postgres COPY command to do a bulk load but this would make incremental updates a little harder
 - I have commonly queried fields indexed. Depending on what you want to do, you may need more indexes.
 - Changesets can be huge in extent, so you may wish to filter them by area before any visualization. 225 square km seems to be a fairly decent threshold to get the actual spatial footprint of edits. `WHERE ST_Area(ST_Transform(geom, 3410)) < 225000000` will do the trick.
@@ -122,7 +122,7 @@ Find all changesets that were created by JOSM:
 Find all changesets that were created in Liberty Island:
 
     SELECT count(id)
-    FROM osm_changeset c, (SELECT ST_SetSRID(ST_MakeEnvelope(-74.0474545,40.6884971,-74.0433990,40.6911817),4326) s
+    FROM osm_changeset c, (SELECT ST_SetSRID(ST_MakeEnvelope(-74.0474545,40.6884971,-74.0433990,40.6911817),4326) AS geom) s
     WHERE ST_CoveredBy(c.geom, s.geom);
 
 License
