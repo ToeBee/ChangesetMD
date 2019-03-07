@@ -7,7 +7,6 @@ from OpenStreetmap into a postgres database for querying.
 '''
 
 from __future__ import print_function
-import os
 import sys
 import argparse
 import psycopg2
@@ -78,13 +77,7 @@ class ChangesetMD():
     def parseFile(self, connection, changesetFile, doReplication):
         parsedCount = 0
         startTime = datetime.now()
-        cursor = connection.cursor()
-        context = etree.iterparse(changesetFile)
-        if sys.version_info[0] < 3:
-            action, root = context.next()
-        else:
-            action, root = next(context)
-        for action, elem in context:
+        for event, elem in etree.iterparse(changesetFile):
             if(elem.tag != 'changeset'):
                 continue
 
@@ -128,14 +121,16 @@ class ChangesetMD():
         print("parsed {:,}".format(parsedCount))
 
     def fetchReplicationFile(self, sequenceNumber):
-        topdir = format(sequenceNumber / 1000000, '003')
-        subdir = format((sequenceNumber / 1000) % 1000, '003')
-        fileNumber = format(sequenceNumber % 1000, '003')
+        sequenceNumber = str(sequenceNumber).zfill(9)
+        topdir = str(sequenceNumber)[:3]
+        subdir = str(sequenceNumber)[3:6]
+        fileNumber = str(sequenceNumber)[-3:]
         fileUrl = BASE_REPL_URL + topdir + '/' + subdir + '/' + fileNumber + '.osm.gz'
         print("opening replication file at " + fileUrl)
-        replicationFile = requests.get(fileUrl)
-        replicationData = replicationFile.text
-        return gzip.GzipFile(fileobj=replicationData)
+        replicationFile = requests.get(fileUrl, stream=True)
+        replicationData = replicationFile.raw
+        f = gzip.GzipFile(fileobj=replicationData)
+        return f
 
     def doReplication(self, connection):
         cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
