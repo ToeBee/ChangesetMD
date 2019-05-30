@@ -119,7 +119,7 @@ class ChangesetMD():
                                 elem.attrib.get('max_lat', None), elem.attrib.get('min_lon', None),  elem.attrib.get('max_lon', None), elem.attrib.get('closed_at', None),
                                      elem.attrib.get('open', None), elem.attrib.get('num_changes', None), elem.attrib.get('user', None), tags))
 
-            if((parsedCount % 10000) == 0):
+            if((parsedCount % 100000) == 0):
                 self.insertNewBatch(connection, changesets)
                 self.insertNewBatchComment(connection, comments )
                 changesets = []
