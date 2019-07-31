@@ -102,7 +102,7 @@ class ChangesetMD():
                 for commentElement in discussion.iterchildren(tag='comment'):
                     for text in commentElement.iterchildren(tag='text'):
                        text = text.text
-                    comment = (elem.attrib['id'], ommentElement.attrib.get('uid'),  commentElement.attrib.get('user'), commentElement.attrib.get('date'), text)
+                    comment = (elem.attrib['id'], commentElement.attrib.get('uid'),  commentElement.attrib.get('user'), commentElement.attrib.get('date'), text)
                     comments.append(comment)
 
             if(doReplication):
