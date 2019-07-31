@@ -56,7 +56,7 @@ class ChangesetMD():
             sql = '''INSERT into osm_changeset
                     (id, user_id, created_at, min_lat, max_lat, min_lon, max_lon, closed_at, open, num_changes, user_name, tags, geom)
                     values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,ST_SetSRID(ST_MakeEnvelope(%s,%s,%s,%s), 4326))'''
-            pyscopg2.extras.execute_batch(cursor, sql, data_arr)
+            psycopg2.extras.execute_batch(cursor, sql, data_arr)
             cursor.close()
         else:
             sql = '''INSERT into osm_changeset
