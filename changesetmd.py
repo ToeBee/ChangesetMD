@@ -131,7 +131,7 @@ class ChangesetMD():
             while elem.getprevious() is not None:
                 del elem.getparent()[0]
         # Update whatever is left, then commit
-        self.isertNewBatch(connection, changesets)
+        self.insertNewBatch(connection, changesets)
         self.insertNewBatchComment(connection, comments)
         connection.commit()
         print "parsing complete"
