@@ -1,5 +1,5 @@
 lxml==4.2.3
 psycopg2-binary==2.7.5
-PyYAML==3.12
+PyYAML==5.1.2
 requests==2.11.1
 bz2file==0.98
