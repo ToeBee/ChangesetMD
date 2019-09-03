@@ -9,15 +9,15 @@ from OpenStreetmap into a postgres database for querying.
 from __future__ import print_function
 import sys
 import argparse
+import gzip
+from datetime import datetime
+from datetime import timedelta
 import psycopg2
 import psycopg2.extras
 import queries
-import gzip
 import requests
 import yaml
 from lxml import etree
-from datetime import datetime
-from datetime import timedelta
 
 try:
     from bz2file import BZ2File
@@ -84,7 +84,7 @@ class ChangesetMD():
         startTime = datetime.now()
         cursor = connection.cursor()
         context = etree.iterparse(changesetFile)
-        action, root = context.next()
+        action, root = next(context)
         changesets = []
         comments = []
         for action, elem in context:
@@ -122,8 +122,8 @@ class ChangesetMD():
                 self.insertNewBatchComment(connection, comments )
                 changesets = []
                 comments = []
-                print "parsed %s" % ('{:,}'.format(parsedCount))
-                print "cumulative rate: %s/sec" % '{:,.0f}'.format(parsedCount/timedelta.total_seconds(datetime.now() - startTime))
+                print("parsed {}".format(('{:,}'.format(parsedCount))))
+                print("cumulative rate: {}/sec".format('{:,.0f}'.format(parsedCount/timedelta.total_seconds(datetime.now() - startTime))))
 
             #clear everything we don't need from memory to avoid leaking
             elem.clear()
