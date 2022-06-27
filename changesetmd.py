@@ -18,7 +18,7 @@ from yaml import CLoader as Loader
 from lxml import etree
 from datetime import datetime
 from datetime import timedelta
-from io import StringIO
+from io import BytesIO
 
 try:
     from bz2file import BZ2File
@@ -227,7 +227,7 @@ class ChangesetMD:
         )
         print(('opening replication file at ' + fileUrl))
         replicationFile = urllib.request.urlopen(fileUrl)
-        replicationData = StringIO(replicationFile.read())
+        replicationData = BytesIO(replicationFile.read())
         return gzip.GzipFile(fileobj=replicationData)
 
     def doReplication(self, connection):
