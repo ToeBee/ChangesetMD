@@ -27,7 +27,7 @@ try:
 except ImportError:
     bz2Support = False
 
-BASE_REPL_URL = 'http://planet.openstreetmap.org/replication/changesets/'
+BASE_REPL_URL = 'https://planet.openstreetmap.org/replication/changesets/'
 
 
 class ChangesetMD:
