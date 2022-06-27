@@ -6,7 +6,6 @@ from OpenStreetmap into a postgres database for querying.
 @author: Toby Murray
 """
 
-import os
 import sys
 import argparse
 import psycopg2
@@ -15,6 +14,7 @@ import queries
 import gzip
 import urllib.request, urllib.error, urllib.parse
 import yaml
+from yaml import CLoader as Loader
 from lxml import etree
 from datetime import datetime
 from datetime import timedelta
@@ -267,7 +267,7 @@ class ChangesetMD:
         returnStatus = 0
         try:
             serverState = yaml.load(
-                urllib.request.urlopen(BASE_REPL_URL + 'state.yaml')
+                urllib.request.urlopen(BASE_REPL_URL + 'state.yaml'), Loader=Loader
             )
             lastServerSequence = serverState['sequence']
             print('got sequence')
