@@ -213,9 +213,9 @@ class ChangesetMD:
         print(('parsed {:,}'.format(parsedCount)))
 
     def fetchReplicationFile(self, sequenceNumber):
-        topdir = format(sequenceNumber / 1000000, '003')
-        subdir = format((sequenceNumber / 1000) % 1000, '003')
-        fileNumber = format(sequenceNumber % 1000, '003')
+        topdir = "{:03d}".format(int(sequenceNumber / 1000000))
+        subdir = "{:03d}".format(int((sequenceNumber / 1000) % 1000))
+        fileNumber = "{:03d}".format(int(sequenceNumber % 1000))
         fileUrl = (
             BASE_REPL_URL
             + topdir
