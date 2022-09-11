@@ -8,7 +8,7 @@ It can also keep a database created with a weekly dump file up to date using min
 Setup
 ------------
 
-ChangesetMD works with python 2.7 and Python 3.5.
+ChangesetMD works with Python 3.6 or newer.
 
 Aside from postgresql, ChangesetMD depends on the python libraries psycopg2 and lxml.
 On Debian-based systems this means installing the python-psycopg2 and python-lxml packages.
