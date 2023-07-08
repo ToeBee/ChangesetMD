@@ -28,6 +28,28 @@ It is easiest if your OS user has access to this database. I just created a user
     createuser <username>
 
 
+Full Debian build instructions
+------------------------------
+
+    sudo apt install sudo screen locate git tar unzip wget bzip2 apache2 python3-psycopg2 python3-yaml libpq-dev postgresql postgresql-contrib postgis postgresql-15-postgis-3 postgresql-15-postgis-3-scripts net-tools curl python3-full gcc libpython3.11-dev libxml2-dev libxslt-dev
+
+    python3 -m venv .venv
+    source .venv/bin/activate
+    pip install -r requirements.txt
+
+    sudo -u postgres -i
+    createuser youruseraccount
+    createdb -E UTF8 -O youruseraccount changesets
+
+    psql
+    \c changesets
+    CREATE EXTENSION postgis;
+    ALTER TABLE geometry_columns OWNER TO youruseraccount;
+    ALTER TABLE spatial_ref_sys OWNER TO youruseraccount;
+    \q
+    exit
+
+
 Execution
 ------------
 The first time you run it, you will need to include the -c | --create option to create the table:
