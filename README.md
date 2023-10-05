@@ -54,17 +54,19 @@ Execution
 ------------
 The first time you run it, you will need to include the -c | --create option to create the table:
 
-    python changesetmd.py -d <database> -c
+    python changesetmd.py -d <database> -c -g
+
+The `-g` | `--geometry` argument is optional and builds polygon geometries for changesets so that you can query which changesets were within which areas.
 
 The create function can be combined with the file option to immediately parse a file.
 
 To parse a dump file, use the -f | --file option.
 
-    python changesetmd.py -d <database> -f /tmp/changeset-latest.osm
+    python changesetmd.py -d <database> -g -f /tmp/discussions-latest.osm.bz2
 
 If no other arguments are given, it will access postgres using the default settings of the postgres client, typically connecting on the unix socket as the current OS user. Use the ```--help``` argument to see optional arguments for connecting to postgres.
 
-You can add the `-g` | `--geometry` option to build polygon geometries (the database also needs to be created with this option).
+Again, the `-g` | `--geometry` argument is optional.  Either of changeset-latest.osm.bz2 or discussions-latest.osm.bz2 or neither can be used to populate the database.
 
 Replication
 ------------
