@@ -148,13 +148,3 @@ Find all changesets that were created in Liberty Island:
     SELECT count(id)
     FROM osm_changeset c, (SELECT ST_SetSRID(ST_MakeEnvelope(-74.0474545,40.6884971,-74.0433990,40.6911817),4326) AS geom) s
     WHERE ST_CoveredBy(c.geom, s.geom);
-
-License
-------------
-Copyright (C) 2012  Toby Murray
-
-This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-
-See the GNU Affero General Public License for more details: http://www.gnu.org/licenses/agpl.txt
