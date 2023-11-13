@@ -233,7 +233,7 @@ class ChangesetMD:
         # at the end of this method to unlock the database or an error will forever leave it locked
         returnStatus = 0
         try:
-            serverState = yaml.load(requests.get(BASE_REPL_URL + "state.yaml").text)
+            serverState = yaml.full_load(requests.get(BASE_REPL_URL + "state.yaml").text)
             lastServerSequence = serverState["sequence"]
             print("got sequence")
             lastServerTimestamp = serverState["last_run"]
