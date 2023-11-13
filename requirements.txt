@@ -1,0 +1,6 @@
+bz2file==0.98
+lxml==4.9.3
+psycopg2-binary==2.9.9
+PyYAML==6.0.1
+requests==2.31.0
+urllib3==1.26.18

@@ -8,10 +8,12 @@ It can also keep a database created with a weekly dump file up to date using min
 Setup
 ------------
 
-ChangesetMD works with python 2.7.
+ChangesetMD works with Python 3.6 or newer.
 
 Aside from postgresql, ChangesetMD depends on the python libraries psycopg2 and lxml.
 On Debian-based systems this means installing the python-psycopg2 and python-lxml packages.
+
+If you are using `pip` and `virtualenv`, you can install all dependencies with `pip install -r requirements.txt`.
 
 If you want to parse the changeset file without first unzipping it, you will also need to install the [bz2file library](http://pypi.python.org/pypi/bz2file) since the built in bz2 library can not handle multi-stream bzip files.
 
@@ -26,21 +28,45 @@ It is easiest if your OS user has access to this database. I just created a user
     createuser <username>
 
 
+Full Debian build instructions
+------------------------------
+
+    sudo apt install sudo screen locate git tar unzip wget bzip2 apache2 python3-psycopg2 python3-yaml libpq-dev postgresql postgresql-contrib postgis postgresql-15-postgis-3 postgresql-15-postgis-3-scripts net-tools curl python3-full gcc libpython3.11-dev libxml2-dev libxslt-dev
+
+    python3 -m venv .venv
+    source .venv/bin/activate
+    pip install -r requirements.txt
+
+    sudo -u postgres -i
+    createuser youruseraccount
+    createdb -E UTF8 -O youruseraccount changesets
+
+    psql
+    \c changesets
+    CREATE EXTENSION postgis;
+    ALTER TABLE geometry_columns OWNER TO youruseraccount;
+    ALTER TABLE spatial_ref_sys OWNER TO youruseraccount;
+    \q
+    exit
+
+
 Execution
 ------------
 The first time you run it, you will need to include the -c | --create option to create the table:
 
-    python changesetmd.py -d <database> -c
+    python changesetmd.py -d <database> -c -g
+
+The `-g` | `--geometry` argument is optional and builds polygon geometries for changesets so that you can query which changesets were within which areas.
 
 The create function can be combined with the file option to immediately parse a file.
 
 To parse a dump file, use the -f | --file option.
 
-    python changesetmd.py -d <database> -f /tmp/changeset-latest.osm
+    python changesetmd.py -d <database> -g -f /tmp/discussions-latest.osm.bz2
 
 If no other arguments are given, it will access postgres using the default settings of the postgres client, typically connecting on the unix socket as the current OS user. Use the ```--help``` argument to see optional arguments for connecting to postgres.
 
-You can add the `-g` | `--geometry` option to build polygon geometries (the database also needs to be created with this option).
+Again, the `-g` | `--geometry` argument is optional.  Either of changeset-latest.osm.bz2 or discussions-latest.osm.bz2 or neither can be used to populate the database.
 
 Replication
 ------------
@@ -122,13 +148,3 @@ Find all changesets that were created in Liberty Island:
     SELECT count(id)
     FROM osm_changeset c, (SELECT ST_SetSRID(ST_MakeEnvelope(-74.0474545,40.6884971,-74.0433990,40.6911817),4326) AS geom) s
     WHERE ST_CoveredBy(c.geom, s.geom);
-
-License
-------------
-Copyright (C) 2012  Toby Murray
-
-This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-
-See the GNU Affero General Public License for more details: http://www.gnu.org/licenses/agpl.txt
